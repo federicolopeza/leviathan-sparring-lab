@@ -1,0 +1,82 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+
+  - job_name: syslog
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: syslog
+          host: levlab
+          __path__: /var/log/syslog
+
+  - job_name: auth
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: auth
+          host: levlab
+          __path__: /var/log/auth.log
+
+  - job_name: suricata-eve
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: suricata
+          source: eve
+          host: levlab
+          __path__: /var/log/suricata/eve.json
+
+  - job_name: suricata-fast
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: suricata
+          source: fast
+          host: levlab
+          __path__: /var/log/suricata/fast.log
+
+  - job_name: falco
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: falco
+          host: levlab
+          __path__: /var/log/falco/falco.log
+
+  - job_name: ufw
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: ufw
+          host: levlab
+          __path__: /var/log/ufw.log
+
+  - job_name: fail2ban
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: fail2ban
+          host: levlab
+          __path__: /var/log/fail2ban.log
+
+  - job_name: containers
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: container
+      - source_labels: ['__meta_docker_container_log_stream']
+        target_label: stream
+      - target_label: host
+        replacement: levlab

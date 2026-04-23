@@ -1,16 +1,18 @@
-output "server_ipv4" {
-  value       = vultr_instance.lab.main_ip
-  description = "Public IPv4 -- Ansible + WireGuard bootstrap"
+output "tunnel_id" {
+  value       = cloudflare_zero_trust_tunnel_cloudflared.lab.id
+  description = "CF tunnel ID -- consumed by cloudflared on VPS"
 }
 
-output "server_id" {
-  value = vultr_instance.lab.id
+output "tunnel_token" {
+  value       = cloudflare_zero_trust_tunnel_cloudflared.lab.tunnel_token
+  description = "CF tunnel token -- used by cloudflared service"
+  sensitive   = true
 }
 
-output "server_label" {
-  value = vultr_instance.lab.label
+output "lab_root_fqdn" {
+  value = "lab.${var.base_domain}"
 }
 
-output "cf_ruleset_id" {
-  value = cloudflare_ruleset.lab_allowlist.id
+output "lab_wildcard_fqdn" {
+  value = "*.lab.${var.base_domain}"
 }

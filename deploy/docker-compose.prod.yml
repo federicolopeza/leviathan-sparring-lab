@@ -1,0 +1,551 @@
+#
+# Leviathan Sparring Lab — PRODUCTION compose (upstream-only)
+# 22 target stacks + full observability
+# Every image = proven upstream pull, zero local builds
+# Hardening: no-new-privileges, cap_drop, mem limits, log-caps
+#
+
+x-zoo: &zoo
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  logging:
+    driver: json-file
+    options:
+      max-size: "50m"
+      max-file: "3"
+
+x-zoo-caps: &zoo-caps
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "50m"
+      max-file: "3"
+
+services:
+
+  # ════════════════════════════════ INGRESS ════════════════════════════════
+
+  traefik:
+    image: traefik:v3.2
+    container_name: traefik
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:8443
+      - --metrics.prometheus=true
+      - --metrics.prometheus.entrypoint=traefik
+      - --accesslog=true
+      - --accesslog.filepath=/logs/access.log
+      - --accesslog.format=json
+      - --accesslog.bufferingsize=100
+      - --accesslog.fields.defaultmode=keep
+      - --accesslog.fields.headers.defaultmode=keep
+      - --log.level=INFO
+      - --log.filepath=/logs/traefik.log
+      - --log.format=json
+      - --serverstransport.insecureskipverify=true
+      - --entrypoints.traefik.address=:8088
+    ports:
+      - "127.0.0.1:8443:8443"
+      - "127.0.0.1:8088:8088"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /opt/levlab/traefik/logs:/logs
+      - /opt/levlab/traefik/dynamic:/etc/traefik/dynamic:ro
+    networks:
+      - edge_net
+      - cms_net
+      - api_net
+      - id_net
+      - cicd_net
+      - data_net
+      - cloud_net
+      - mail_net
+      - obs_net
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dashboard.rule=Host(`traefik.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.dashboard.service=api@internal
+      - traefik.http.routers.dashboard.entrypoints=websecure
+    <<: *zoo-caps
+
+  # ═══════════════════════════ CMS / APPSEC (7) ═══════════════════════════
+
+  wordpress-cve:
+    image: wordpress:5.0.0-apache
+    environment:
+      - WORDPRESS_DB_HOST=mysql-wp:3306
+      - WORDPRESS_DB_USER=wpuser
+      - WORDPRESS_DB_PASSWORD=wppass
+      - WORDPRESS_DB_NAME=wordpress
+    depends_on:
+      - mysql-wp
+    networks: [cms_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.wordpress.rule=Host(`wp.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.wordpress.entrypoints=websecure
+      - traefik.http.routers.wordpress.tls=true
+      - traefik.http.services.wordpress.loadbalancer.server.port=80
+    mem_limit: 768m
+    <<: *zoo-caps
+
+  mysql-wp:
+    image: mysql:5.7
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_USER=wpuser
+      - MYSQL_PASSWORD=wppass
+    volumes:
+      - mysql-wp-data:/var/lib/mysql
+    networks: [cms_net]
+    mem_limit: 512m
+    <<: *zoo-caps
+
+  drupal-cve:
+    image: drupal:7.58-apache
+    networks: [cms_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.drupal.rule=Host(`drupal.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.drupal.entrypoints=websecure
+      - traefik.http.routers.drupal.tls=true
+      - traefik.http.services.drupal.loadbalancer.server.port=80
+    mem_limit: 512m
+    <<: *zoo-caps
+
+  dvwa:
+    image: vulnerables/web-dvwa:latest
+    networks: [cms_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dvwa.rule=Host(`dvwa.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.dvwa.entrypoints=websecure
+      - traefik.http.routers.dvwa.tls=true
+      - traefik.http.services.dvwa.loadbalancer.server.port=80
+    mem_limit: 512m
+    <<: *zoo-caps
+
+  bwapp:
+    image: raesene/bwapp:latest
+    networks: [cms_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.bwapp.rule=Host(`bwapp.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.bwapp.entrypoints=websecure
+      - traefik.http.routers.bwapp.tls=true
+      - traefik.http.services.bwapp.loadbalancer.server.port=80
+    mem_limit: 512m
+    <<: *zoo-caps
+
+  webgoat:
+    image: webgoat/webgoat:v2025.3
+    environment:
+      - TZ=America/Chicago
+    networks: [cms_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.webgoat.rule=Host(`webgoat.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.webgoat.entrypoints=websecure
+      - traefik.http.routers.webgoat.tls=true
+      - traefik.http.services.webgoat.loadbalancer.server.port=8080
+    mem_limit: 1024m
+    <<: *zoo-caps
+
+  mutillidae:
+    image: citizenstig/nowasp:latest
+    networks: [cms_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.mutillidae.rule=Host(`mutillidae.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.mutillidae.entrypoints=websecure
+      - traefik.http.routers.mutillidae.tls=true
+      - traefik.http.services.mutillidae.loadbalancer.server.port=80
+    mem_limit: 512m
+    <<: *zoo-caps
+
+  juice-shop:
+    image: bkimminich/juice-shop:latest
+    networks: [cms_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.juice.rule=Host(`juice.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.juice.entrypoints=websecure
+      - traefik.http.routers.juice.tls=true
+      - traefik.http.services.juice.loadbalancer.server.port=3000
+    mem_limit: 768m
+    <<: *zoo-caps
+
+  # ═══════════════════════════ API (3 reliable) ═══════════════════════════
+
+  vampi:
+    image: erev0s/vampi:latest
+    environment:
+      - vulnerable=1
+    networks: [api_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.vampi.rule=Host(`vampi.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.vampi.entrypoints=websecure
+      - traefik.http.routers.vampi.tls=true
+      - traefik.http.services.vampi.loadbalancer.server.port=5000
+    mem_limit: 256m
+    <<: *zoo-caps
+
+  dvga:
+    image: dolevf/dvga:latest
+    environment:
+      - WEB_HOST=0.0.0.0
+    networks: [api_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dvga.rule=Host(`dvga.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.dvga.entrypoints=websecure
+      - traefik.http.routers.dvga.tls=true
+      - traefik.http.services.dvga.loadbalancer.server.port=5013
+    mem_limit: 256m
+    <<: *zoo-caps
+
+  # ═══════════════════════════ IDENTITY (1) ═══════════════════════════════
+
+  keycloak-weak:
+    image: quay.io/keycloak/keycloak:25.0.0
+    command: start-dev
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME=keycloak.lab.${BASE_DOMAIN}
+      - KC_PROXY=edge
+      - KC_HTTP_ENABLED=true
+    networks: [id_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.keycloak.rule=Host(`keycloak.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.keycloak.entrypoints=websecure
+      - traefik.http.routers.keycloak.tls=true
+      - traefik.http.services.keycloak.loadbalancer.server.port=8080
+    mem_limit: 1536m
+    <<: *zoo-caps
+
+  # ══════════════════════════ CI/CD SUPPLY CHAIN (4) ══════════════════════
+
+  gitea:
+    image: gitea/gitea:1.21.11
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__server__ROOT_URL=https://gitea.lab.${BASE_DOMAIN}/
+      - GITEA__security__INSTALL_LOCK=true
+    volumes:
+      - gitea-data:/data
+    networks: [cicd_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.gitea.rule=Host(`gitea.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.gitea.entrypoints=websecure
+      - traefik.http.routers.gitea.tls=true
+      - traefik.http.services.gitea.loadbalancer.server.port=3000
+    mem_limit: 1024m
+    <<: *zoo-caps
+
+  jenkins-old:
+    image: jenkins/jenkins:2.138.4-lts
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    volumes:
+      - jenkins-data:/var/jenkins_home
+    networks: [cicd_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.jenkins.rule=Host(`jenkins.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.jenkins.entrypoints=websecure
+      - traefik.http.routers.jenkins.tls=true
+      - traefik.http.services.jenkins.loadbalancer.server.port=8080
+    mem_limit: 1024m
+    <<: *zoo-caps
+
+  nexus-old:
+    image: sonatype/nexus3:3.20.0
+    volumes:
+      - nexus-data:/nexus-data
+    networks: [cicd_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.nexus.rule=Host(`nexus.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.nexus.entrypoints=websecure
+      - traefik.http.routers.nexus.tls=true
+      - traefik.http.services.nexus.loadbalancer.server.port=8081
+    mem_limit: 1536m
+    <<: *zoo-caps
+
+  sonarqube-old:
+    image: sonarqube:7.9-community
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      - sonar-data:/opt/sonarqube/data
+    networks: [cicd_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.sonar.rule=Host(`sonar.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.sonar.entrypoints=websecure
+      - traefik.http.routers.sonar.tls=true
+      - traefik.http.services.sonar.loadbalancer.server.port=9000
+    mem_limit: 1536m
+    <<: *zoo-caps
+
+  # ════════════════════════════ DATA STORES (4) ═══════════════════════════
+
+  mongo-open:
+    image: mongo:6.0
+    command: ["mongod", "--bind_ip_all"]
+    volumes:
+      - mongo-data:/data/db
+    networks: [data_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.mongo.rule=HostSNI(`*`)
+      - traefik.tcp.routers.mongo.entrypoints=mongo
+      - traefik.tcp.services.mongo.loadbalancer.server.port=27017
+    mem_limit: 512m
+    <<: *zoo-caps
+
+  redis-open:
+    image: redis:7.2
+    command: ["redis-server", "--protected-mode", "no", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    networks: [data_net, obs_net]
+    mem_limit: 256m
+    <<: *zoo-caps
+
+  postgres-open:
+    image: postgres:16.2
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_DB=megacorp
+      - POSTGRES_USER=app
+      - POSTGRES_PASSWORD=app
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - /opt/levlab/data/postgres-seed.sql:/docker-entrypoint-initdb.d/01-seed.sql:ro
+    networks: [data_net, obs_net]
+    mem_limit: 512m
+    <<: *zoo-caps
+
+  elastic-open:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+    volumes:
+      - elastic-data:/usr/share/elasticsearch/data
+    networks: [data_net, obs_net]
+    mem_limit: 1024m
+    <<: *zoo-caps
+
+  # ═══════════════════════════ CLOUD SIM (3) ══════════════════════════════
+
+  localstack:
+    image: localstack/localstack:3.4
+    environment:
+      - DEBUG=0
+      - SERVICES=s3,sts,iam,lambda,apigateway,ec2,secretsmanager,dynamodb
+    volumes:
+      - localstack-data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks: [cloud_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.aws.rule=Host(`aws.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.aws.entrypoints=websecure
+      - traefik.http.routers.aws.tls=true
+      - traefik.http.services.aws.loadbalancer.server.port=4566
+    mem_limit: 1024m
+    <<: *zoo-caps
+
+  minio-open:
+    image: minio/minio:RELEASE.2024-11-07T00-52-20Z
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio-data:/data
+    networks: [cloud_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.minio.rule=Host(`minio.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.minio.entrypoints=websecure
+      - traefik.http.routers.minio.tls=true
+      - traefik.http.services.minio.loadbalancer.server.port=9001
+      - traefik.http.routers.minio-api.rule=Host(`s3.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.minio-api.entrypoints=websecure
+      - traefik.http.routers.minio-api.tls=true
+      - traefik.http.routers.minio-api.service=minio-api
+      - traefik.http.services.minio-api.loadbalancer.server.port=9000
+    mem_limit: 512m
+    <<: *zoo-caps
+
+  vault-dev-bad:
+    image: hashicorp/vault:1.16.3
+    cap_add: [ "IPC_LOCK" ]
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=${VAULT_DEV_ROOT_TOKEN_ID}
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+    command: server -dev
+    volumes:
+      - vault-data:/vault/file
+    networks: [cloud_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.vault.rule=Host(`vault.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.vault.entrypoints=websecure
+      - traefik.http.routers.vault.tls=true
+      - traefik.http.services.vault.loadbalancer.server.port=8200
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "50m", max-file: "3" }
+    mem_limit: 512m
+
+  # ════════════════════════════ MAIL (1) ══════════════════════════════════
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    networks: [mail_net, obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.mail.rule=Host(`mail.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.mail.entrypoints=websecure
+      - traefik.http.routers.mail.tls=true
+      - traefik.http.services.mail.loadbalancer.server.port=8025
+    mem_limit: 128m
+    <<: *zoo-caps
+
+  # ═════════════════════════ OBSERVABILITY ═══════════════════════════════
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks: [obs_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.grafana.rule=Host(`grafana.lab.${BASE_DOMAIN}`)
+      - traefik.http.routers.grafana.entrypoints=websecure
+      - traefik.http.routers.grafana.tls=true
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+    mem_limit: 512m
+    <<: *zoo-caps
+
+  loki:
+    image: grafana/loki:3.2.0
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki-data:/loki
+    networks: [obs_net]
+    mem_limit: 512m
+    <<: *zoo-caps
+
+  promtail:
+    image: grafana/promtail:3.2.0
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - /var/log:/var/log:ro
+      - /opt/levlab/traefik/logs:/traefik-logs:ro
+      - /opt/levlab/observability/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [obs_net]
+    mem_limit: 256m
+    <<: *zoo-caps
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=72h
+    volumes:
+      - /opt/levlab/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks: [obs_net]
+    mem_limit: 512m
+    <<: *zoo-caps
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    networks: [obs_net]
+    mem_limit: 256m
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "2" }
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    command:
+      - --path.rootfs=/host
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    networks: [obs_net]
+    mem_limit: 128m
+    restart: unless-stopped
+
+networks:
+  edge_net:   { ipam: { config: [ { subnet: 172.31.0.0/24  } ] } }
+  obs_net:    { ipam: { config: [ { subnet: 172.31.10.0/24 } ] } }
+  cms_net:    { ipam: { config: [ { subnet: 172.31.20.0/24 } ] } }
+  api_net:    { ipam: { config: [ { subnet: 172.31.30.0/24 } ] } }
+  id_net:     { ipam: { config: [ { subnet: 172.31.40.0/24 } ] } }
+  cicd_net:   { ipam: { config: [ { subnet: 172.31.50.0/24 } ] } }
+  data_net:   { ipam: { config: [ { subnet: 172.31.60.0/24 } ] } }
+  cloud_net:  { ipam: { config: [ { subnet: 172.31.70.0/24 } ] } }
+  mail_net:   { ipam: { config: [ { subnet: 172.31.80.0/24 } ] } }
+  pivot_net:  { ipam: { config: [ { subnet: 172.31.200.0/24 } ] } }
+
+volumes:
+  mysql-wp-data:
+  gitea-data:
+  jenkins-data:
+  nexus-data:
+  sonar-data:
+  mongo-data:
+  redis-data:
+  pg-data:
+  elastic-data:
+  localstack-data:
+  minio-data:
+  vault-data:
+  grafana-data:
+  loki-data:
+  prometheus-data:

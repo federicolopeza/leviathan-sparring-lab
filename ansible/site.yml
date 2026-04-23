@@ -1,14 +1,26 @@
 ---
-- name: Deploy Leviathan Sparring Lab
+- name: Leviathan Sparring Lab -- host hardening + deploy (VPS-local run)
   hosts: all
   become: true
+  gather_facts: true
+
+  vars:
+    base_domain: "{{ lookup('env', 'BASE_DOMAIN') }}"
+    operator_public_ip: "{{ lookup('env', 'OPERATOR_PUBLIC_IP') }}"
+    cf_tunnel_id: "{{ lookup('env', 'CF_TUNNEL_ID') }}"
+    cf_tunnel_token: "{{ lookup('env', 'CF_TUNNEL_TOKEN') }}"
+    grafana_admin_password: "{{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') }}"
+    wazuh_api_password: "{{ lookup('env', 'WAZUH_API_PASSWORD') }}"
+    minio_root_password: "{{ lookup('env', 'MINIO_ROOT_PASSWORD') }}"
+    vault_dev_token: "{{ lookup('env', 'VAULT_DEV_ROOT_TOKEN_ID') }}"
+    run_id: "{{ lookup('env', 'RUN_ID') }}"
+
   roles:
     - hardening          # packages, users, sysctl, auditd, AIDE, AppArmor, fail2ban, CrowdSec, Falco
-    - docker             # daemon.json, userns-remap, seccomp, rootless control-plane
-    - wireguard          # wg0 + sshd bind to 10.88.0.1
-    - cloudflared        # systemd unit + tunnel credentials
-    - observability      # Wazuh, Loki, Grafana, Suricata, Arkime, tcpdump ring
+    - docker             # daemon.json, userns-remap, seccomp
+    - cloudflared        # systemd unit + tunnel config
+    - observability      # Wazuh/Loki/Grafana/Suricata/Arkime/tcpdump
     - zoo-deploy         # docker compose up 28 stacks
-    - seed-cicd-repos    # Gitea/GitLab/Jenkins fixture repos + tokens
-    - honeytokens        # canary files + DB rows + buckets + secrets
-    - kill-switch        # Traefik static route + file marker + smoke validation
+    - seed-cicd-repos    # Gitea/GitLab/Jenkins fixture repos
+    - honeytokens        # canary files + bucket objects + Vault secrets
+    - kill-switch        # Traefik dynamic route + smoke validation

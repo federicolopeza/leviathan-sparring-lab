@@ -1,0 +1,56 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {
+      "title": "Request rate per container (Loki)",
+      "type": "timeseries",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [{"expr": "sum by (container) (rate({host=\"levlab\", container=~\"deploy-.+\"}[1m]))", "refId": "A"}],
+      "gridPos": {"x":0,"y":0,"w":24,"h":8}
+    },
+    {
+      "title": "Suricata alerts (5m)",
+      "type": "stat",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [{"expr": "sum(count_over_time({job=\"suricata\", source=\"eve\"} |~ \"alert\" [5m]))", "refId": "A"}],
+      "gridPos": {"x":0,"y":8,"w":6,"h":4}
+    },
+    {
+      "title": "Auth failures (5m)",
+      "type": "stat",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [{"expr": "sum(count_over_time({job=\"auth\"} |~ \"Failed password|invalid user\" [5m]))", "refId": "A"}],
+      "gridPos": {"x":6,"y":8,"w":6,"h":4}
+    },
+    {
+      "title": "Falco events (5m)",
+      "type": "stat",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [{"expr": "sum(count_over_time({job=\"falco\"} [5m]))", "refId": "A"}],
+      "gridPos": {"x":12,"y":8,"w":6,"h":4}
+    },
+    {
+      "title": "Cloudflared requests (5m)",
+      "type": "stat",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [{"expr": "sum(count_over_time({container=\"cloudflared\"} [5m]))", "refId": "A"}],
+      "gridPos": {"x":18,"y":8,"w":6,"h":4}
+    },
+    {
+      "title": "Top containers by log volume (1h)",
+      "type": "bargauge",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [{"expr": "topk(10, sum by (container) (count_over_time({host=\"levlab\", container=~\"deploy-.+\"}[1h])))", "refId": "A", "instant": true}],
+      "gridPos": {"x":0,"y":12,"w":24,"h":8}
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["levlab"],
+  "time": {"from": "now-30m", "to": "now"},
+  "title": "Attack Overview",
+  "uid": "levlab-overview",
+  "version": 1
+}

@@ -1,0 +1,43 @@
+{
+  "editable": true,
+  "panels": [
+    {
+      "title": "CPU % per container",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name=~\"deploy-.+\"}[1m])) * 100", "refId": "A"}],
+      "gridPos": {"x":0,"y":0,"w":12,"h":8}
+    },
+    {
+      "title": "Memory GB per container",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "container_memory_usage_bytes{name=~\"deploy-.+\"} / 1024 / 1024 / 1024", "refId": "A"}],
+      "gridPos": {"x":12,"y":0,"w":12,"h":8}
+    },
+    {
+      "title": "Network RX MB/s per container",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "rate(container_network_receive_bytes_total{name=~\"deploy-.+\"}[1m]) / 1024 / 1024", "refId": "A"}],
+      "gridPos": {"x":0,"y":8,"w":12,"h":8}
+    },
+    {
+      "title": "Host CPU and Memory %",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m])) * 100)", "refId": "A", "legendFormat": "CPU %"},
+        {"expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100", "refId": "B", "legendFormat": "Mem %"}
+      ],
+      "gridPos": {"x":12,"y":8,"w":12,"h":8}
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["levlab"],
+  "time": {"from": "now-30m", "to": "now"},
+  "title": "System Health",
+  "uid": "levlab-health",
+  "version": 1
+}

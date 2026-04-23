@@ -1,0 +1,26 @@
+http:
+  middlewares:
+    kill-response:
+      errors:
+        status: [ "503" ]
+        service: kill-service
+        query: /503.html
+    add-kill-header:
+      headers:
+        customResponseHeaders:
+          X-Kill-Switch: active
+          X-Levlab: paused-by-operator
+
+  routers:
+    kill-switch-router:
+      rule: "Host(`lab.${BASE_DOMAIN}`) && PathPrefix(`/kill-switch`)"
+      entrypoints: [ websecure ]
+      service: kill-service
+      middlewares: [ add-kill-header, kill-response ]
+      priority: 100000
+      tls: {}
+
+  services:
+    kill-service:
+      loadBalancer:
+        servers: []
