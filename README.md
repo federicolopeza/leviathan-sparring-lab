@@ -48,10 +48,11 @@ vim .env.lab                      # Vultr API, Cloudflare token, dominio, etc.
 | **OPS** — scripts y checklists | | |
 | 11 | [operations](docs/11-operations.md) | Bootstrap/teardown/kill/export |
 | 12 | [checklists](docs/12-checklists.md) | Pre/post + success criteria + cost |
+| 13 | [credentials-guide](docs/13-credentials-guide.md) | Cómo obtener + dónde guardar cada credencial |
 
 ## Status
 
-- Plan documental: **completo** (13 archivos en `docs/`)
+- Plan documental: **completo** (14 archivos en `docs/`)
 - Repo scaffold (Terraform + Ansible + Dockerfiles + compose): **pendiente**
 - VPS Vultr: **pendiente** (operador crea cuando quiera)
 - Benchmark ejecutado: **pendiente** (24h window post-scaffold+deploy)
@@ -66,7 +67,7 @@ Detalle: [docs/12-checklists.md#cost-projection](docs/12-checklists.md#cost-proj
 
 ## Stack
 
-- **Provider:** Vultr (`vhp-8c-16gb-amd`)
+- **Provider:** Vultr (`vx1-g-8c-32g-480s`, 8 vCPU / 32 GB / 480 GB NVMe, ~$7.34/24h)
 - **OS:** Debian 12 minimal
 - **Runtime:** Docker 26 + userns-remap + seccomp + AppArmor
 - **Ingress:** Cloudflare Tunnel (`cloudflared`) + Traefik + ModSec CRS
