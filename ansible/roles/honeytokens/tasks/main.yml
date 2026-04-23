@@ -1,0 +1,114 @@
+---
+# Role: honeytokens
+# Plant canary files, DB rows, bucket objects, Vault secrets.
+# Triggers route to Wazuh via custom decoders.
+
+# --- Canary file on host ---
+
+- name: Create levlab-canary directory
+  ansible.builtin.file:
+    path: /etc/levlab-canary
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Plant root_token.txt canary file
+  ansible.builtin.copy:
+    content: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.CANARY.levlab-honeytoken-root"
+    dest: /etc/levlab-canary/root_token.txt
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Add auditd watch on canary file
+  ansible.builtin.lineinfile:
+    path: /etc/audit/rules.d/99-levlab.rules
+    line: "-w /etc/levlab-canary/root_token.txt -p rwxa -k levlab-honeytoken"
+    state: present
+  notify: restart auditd
+
+# --- MinIO honeytoken bucket object ---
+
+- name: Wait for MinIO to be ready
+  ansible.builtin.uri:
+    url: http://localhost:9000/minio/health/live
+    status_code: 200
+  register: minio_ready
+  retries: 20
+  delay: 10
+  until: minio_ready.status == 200
+  ignore_errors: true
+
+- name: Install MinIO client (mc)
+  ansible.builtin.get_url:
+    url: https://dl.min.io/client/mc/release/linux-amd64/mc
+    dest: /usr/local/bin/mc
+    mode: "0755"
+  args:
+    creates: /usr/local/bin/mc
+
+- name: Configure mc alias
+  ansible.builtin.command: >
+    mc alias set levlab http://localhost:9000
+    {{ minio_root_user }} {{ minio_root_password }}
+  changed_when: false
+  ignore_errors: true
+
+- name: Create finance-private bucket
+  ansible.builtin.command: mc mb levlab/finance-private --ignore-existing
+  changed_when: false
+  ignore_errors: true
+
+- name: Upload payroll canary object to MinIO
+  ansible.builtin.copy:
+    content: |
+      employee_id,name,salary,ssn
+      EMP-CANARY-001,John Canary,99999,999-99-9999
+      EMP-CANARY-002,Jane Honeytoken,88888,888-88-8888
+    dest: /tmp/payroll-2026.csv
+    mode: "0600"
+
+- name: Push payroll canary to MinIO
+  ansible.builtin.command: mc cp /tmp/payroll-2026.csv levlab/finance-private/payroll-2026.csv
+  changed_when: false
+  ignore_errors: true
+
+# --- Vault honeytoken secret ---
+
+- name: Wait for Vault to be ready
+  ansible.builtin.uri:
+    url: http://localhost:8200/v1/sys/health
+    status_code: [200, 473]
+  register: vault_ready
+  retries: 20
+  delay: 10
+  until: vault_ready.status in [200, 473]
+  ignore_errors: true
+
+- name: Plant prod/github_pat honeytoken in Vault
+  ansible.builtin.uri:
+    url: http://localhost:8200/v1/secret/data/prod/github_pat
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_dev_root_token }}"
+    body_format: json
+    body:
+      data:
+        token: "ghp_HONEYTOKEN_levlab_canary_0000000000"
+        note: "honeytoken — access triggers Wazuh alert"
+    status_code: [200, 204]
+  changed_when: false
+  ignore_errors: true
+
+# --- Jenkins master.key canary ---
+
+- name: Plant Jenkins master.key copy canary
+  ansible.builtin.shell: |
+    docker compose -f /opt/levlab/docker-compose.yml exec -T jenkins-old \
+      bash -c 'cp $JENKINS_HOME/secrets/master.key $JENKINS_HOME/secrets/master.key.copy 2>/dev/null || \
+               echo "HONEYTOKEN-JENKINS-MASTERKEY-COPY-LEVLAB" > $JENKINS_HOME/secrets/master.key.copy'
+  args:
+    chdir: /opt/levlab
+  changed_when: false
+  ignore_errors: true

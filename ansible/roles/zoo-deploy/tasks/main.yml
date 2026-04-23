@@ -1,0 +1,54 @@
+---
+# Role: zoo-deploy
+# Copy docker-compose.yml + env, pull images, bring up 28 stacks + observability.
+
+- name: Create levlab root directory
+  ansible.builtin.file:
+    path: /opt/levlab
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy docker-compose.yml to server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../docker-compose.yml"
+    dest: /opt/levlab/docker-compose.yml
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Copy traefik dynamic configs
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../traefik/"
+    dest: /opt/levlab/traefik/
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Pull all Docker images (parallel, best-effort)
+  ansible.builtin.command: docker compose -f /opt/levlab/docker-compose.yml pull --ignore-pull-failures
+  args:
+    chdir: /opt/levlab
+  changed_when: false
+  environment:
+    COMPOSE_PARALLEL_LIMIT: "8"
+
+- name: Start all stacks
+  ansible.builtin.command: docker compose --env-file /opt/levlab/.env.lab up -d
+  args:
+    chdir: /opt/levlab
+  changed_when: false
+
+- name: Wait for Traefik healthcheck
+  ansible.builtin.uri:
+    url: http://127.0.0.1:8080/ping
+    status_code: 200
+  register: traefik_health
+  retries: 30
+  delay: 10
+  until: traefik_health.status == 200
+
+- name: Wait for core stacks (30s settle)
+  ansible.builtin.pause:
+    seconds: 30

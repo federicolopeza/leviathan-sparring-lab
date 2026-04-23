@@ -1,0 +1,26 @@
+# Leviathan Sparring Lab — cloudflared tunnel config
+# /etc/cloudflared/config.yml
+
+tunnel: {{ cf_tunnel_id }}
+credentials-file: /etc/cloudflared/tunnel-token
+metrics: 127.0.0.1:60123
+
+ingress:
+  # Wildcard *.lab.<BASE_DOMAIN> -> Traefik internal
+  - hostname: "*.lab.{{ base_domain }}"
+    service: https://127.0.0.1:8443
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 30s
+      tlsTimeout: 30s
+
+  # Root lab.<BASE_DOMAIN> -> Traefik internal
+  - hostname: "lab.{{ base_domain }}"
+    service: https://127.0.0.1:8443
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 30s
+      tlsTimeout: 30s
+
+  # Catch-all (required by cloudflared)
+  - service: http_status:404

@@ -1,0 +1,25 @@
+# Traefik dynamic config — kill-switch route
+# Populated by Ansible role kill-switch via traefik-kill-switch.yml.j2
+# This file is a placeholder; the real file is generated with BASE_DOMAIN substituted.
+# See: ansible/templates/traefik-kill-switch.yml.j2
+
+http:
+  routers:
+    kill-switch:
+      rule: "PathPrefix(`/kill-switch`)"
+      service: kill-switch-svc
+      priority: 10000
+      middlewares:
+        - kill-switch-headers
+
+  services:
+    kill-switch-svc:
+      loadBalancer:
+        servers: []
+
+  middlewares:
+    kill-switch-headers:
+      headers:
+        customResponseHeaders:
+          X-Kill-Switch: "active"
+          Content-Type: "application/json"

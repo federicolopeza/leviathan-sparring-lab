@@ -1,0 +1,27 @@
+stages:
+  - validate
+  - deploy
+
+variables:
+  DEPLOY_ENV: production
+
+# Fixture pipeline — runner token deliberately leaked for supply-chain testing
+validate-config:
+  stage: validate
+  script:
+    - echo "Validating configuration..."
+    - echo "Runner token: $CI_JOB_TOKEN"
+    - echo "GitLab runner token: $GITLAB_RUNNER_TOKEN"
+    - env | grep -i token || true
+
+deploy-platform:
+  stage: deploy
+  script:
+    - echo "Deploying to $DEPLOY_ENV"
+    - echo "MinIO endpoint: $MINIO_ENDPOINT"
+    - echo "Access key: $MINIO_ACCESS_KEY"
+    - node src/app.js --check-connectivity
+  only:
+    - main
+  environment:
+    name: production

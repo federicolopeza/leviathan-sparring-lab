@@ -1,0 +1,140 @@
+---
+# Role: seed-cicd-repos
+# Wait for Gitea/GitLab/Jenkins ready, create orgs/repos, push fixture content.
+# Fixture repos live in targets/seed-repos/ and are copied to the server first.
+
+- name: Copy seed-repos to server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../targets/seed-repos/"
+    dest: /opt/levlab/seed-repos/
+    owner: root
+    group: root
+    mode: "0644"
+  ignore_errors: true
+
+# --- Gitea ---
+
+- name: Wait for Gitea API
+  ansible.builtin.uri:
+    url: http://localhost:3001/api/v1/version
+    status_code: 200
+  register: gitea_ready
+  retries: 30
+  delay: 10
+  until: gitea_ready.status == 200
+
+- name: Create Gitea org 'platform'
+  ansible.builtin.uri:
+    url: http://localhost:3001/api/v1/orgs
+    method: POST
+    user: gitea-admin
+    password: admin123
+    force_basic_auth: true
+    body_format: json
+    body:
+      username: platform
+      visibility: private
+    status_code: [201, 422]
+  changed_when: false
+
+- name: Create Gitea repo dev-platform
+  ansible.builtin.uri:
+    url: http://localhost:3001/api/v1/orgs/platform/repos
+    method: POST
+    user: gitea-admin
+    password: admin123
+    force_basic_auth: true
+    body_format: json
+    body:
+      name: dev-platform
+      private: false
+      auto_init: true
+    status_code: [201, 409]
+  changed_when: false
+
+- name: Push seed repo to Gitea
+  ansible.builtin.shell: |
+    set -e
+    cd /opt/levlab/seed-repos/dev-platform
+    git init --quiet
+    git config user.email "seed@levlab"
+    git config user.name "levlab-seed"
+    git add -A
+    git commit -m "seed: fixture secrets" --allow-empty --quiet
+    git remote remove origin 2>/dev/null || true
+    git remote add origin http://gitea-admin:admin123@localhost:3001/platform/dev-platform.git
+    git push -f origin HEAD:main --quiet
+  args:
+    chdir: /opt/levlab/seed-repos/dev-platform
+  changed_when: false
+  when: false  # enable when seed-repos are populated
+
+# --- GitLab ---
+
+- name: Wait for GitLab API
+  ansible.builtin.uri:
+    url: http://localhost:8181/api/v4/version
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_root_token | default('glpat-seed-token') }}"
+    status_code: 200
+  register: gitlab_ready
+  retries: 60
+  delay: 15
+  until: gitlab_ready.status == 200
+
+- name: Create GitLab group 'backend'
+  ansible.builtin.uri:
+    url: http://localhost:8181/api/v4/groups
+    method: POST
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_root_token | default('glpat-seed-token') }}"
+    body_format: json
+    body:
+      name: backend
+      path: backend
+      visibility: private
+    status_code: [201, 400]
+  changed_when: false
+
+- name: Wait for GitLab project api-services
+  ansible.builtin.uri:
+    url: http://localhost:8181/api/v4/projects/backend%2Fapi-services
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_root_token | default('glpat-seed-token') }}"
+    status_code: [200, 404]
+  register: gl_project_check
+  retries: 5
+  delay: 5
+  until: gl_project_check.status in [200, 404]
+  changed_when: false
+
+# --- Jenkins ---
+
+- name: Wait for Jenkins API
+  ansible.builtin.uri:
+    url: http://localhost:8080/api/json
+    user: admin
+    password: admin123
+    force_basic_auth: true
+    status_code: 200
+  register: jenkins_ready
+  retries: 30
+  delay: 15
+  until: jenkins_ready.status == 200
+
+- name: Download Jenkins CLI jar
+  ansible.builtin.get_url:
+    url: http://localhost:8080/jnlpJars/jenkins-cli.jar
+    dest: /opt/levlab/jenkins-cli.jar
+    mode: "0644"
+  args:
+    creates: /opt/levlab/jenkins-cli.jar
+
+- name: Import Jenkins seed job config
+  ansible.builtin.shell: |
+    java -jar /opt/levlab/jenkins-cli.jar \
+      -s http://localhost:8080 \
+      -auth admin:admin123 \
+      create-job deploy-prod < /opt/levlab/seed-repos/jenkins-jobs/jobs/deploy-prod/config.xml
+  changed_when: false
+  ignore_errors: true

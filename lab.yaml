@@ -1,0 +1,147 @@
+engagement:
+  id: leviathan-sparring-lab-24h
+  description: Empirical benchmark against ephemeral hardened-outside / vulnerable-inside lab
+  owner: internal-security
+  timezone: America/Chicago
+  start: "2026-04-23T00:00:00-05:00"
+  end: "2026-04-24T00:00:00-05:00"
+  destroy_after: true
+
+scope:
+  allow_hosts:
+    - "lab.${BASE_DOMAIN}"
+    - "*.lab.${BASE_DOMAIN}"
+    - "10.88.0.1"
+    - "172.31.0.0/16"
+  deny_hosts:
+    - "*.cloudflare.com"
+    - "*.debian.org"
+    - "*.docker.com"
+    - "*.github.com"
+    - "api.cloudflare.com"
+    - "update.argotunnel.com"
+    - "1.1.1.1"
+    - "1.0.0.1"
+  dns_suffixes_in_scope:
+    - ".lab.${BASE_DOMAIN}"
+
+rules_of_engagement:
+  allow_recon:
+    - passive
+    - active_http
+    - active_https
+    - dns
+    - tls
+    - banner_grab
+    - authenticated_enumeration
+  allow_auth_testing: true
+  allow_business_logic_testing: true
+  allow_api_testing: true
+  allow_container_testing: true
+  allow_cloud_testing: true
+  allow_k8s_testing: true
+  allow_identity_testing: true
+  allow_ci_cd_testing: true
+  allow_storage_testing: true
+
+  allow_exploitation_inside_scope: true
+  allow_lateral_movement_inside_scope: true
+  allow_credential_reuse_inside_scope: true
+
+  # Persistencia permitida sólo en sandbox controlado
+  allow_persistence_validation: true
+  persistence_constraints:
+    allowed_paths:
+      - "/tmp/levlab/**"
+      - "/var/tmp/levlab/**"
+      - "/home/app/.levlab/**"
+    forbidden_paths:
+      - "/boot/**"
+      - "/etc/ssh/**"
+      - "/etc/wireguard/**"
+      - "/etc/cloudflared/**"
+      - "/var/lib/docker/**"
+    max_duration_minutes: 30
+    auto_cleanup_required: true
+
+  allow_data_access_for_validation: true
+  data_handling:
+    exfil_outside_scope: false
+    redact_pii_in_reports: true
+    store_only_hashes_for_large_artifacts: true
+    allowed_evidence_locations:
+      - "/opt/levlab/artifacts"
+      - "s3://minio-evidence/${RUN_ID}/"
+    forbidden_data_destinations:
+      - "public internet"
+      - "third-party SaaS"
+
+  deny_actions:
+    - destructive_wipe
+    - crypto_mining
+    - wormable_behavior
+    - internet_pivot
+    - outbound_email_to_real_domains
+    - sms_or_telephony_to_public_networks
+    - container_escape_attempts_against_host
+    - host_persistence_outside_allowed_paths
+    - denial_of_service_over_20rps_per_target
+    - exploitation_of_cloudflared_or_wireguard
+    - disabling_security_controls
+
+safety_limits:
+  max_rps_per_host: 20
+  max_concurrency: 12
+  max_auto_chain_depth: 4
+  max_runtime_hours: 24
+  request_timeout_seconds: 20
+  stop_on_unscoped_hostname: true
+  stop_on_public_ip_outside_scope: true
+  stop_on_severity:
+    - catastrophic
+
+mythos:
+  tiers:
+    stealth:
+      enabled: true
+      max_rps_per_host: 3
+      jitter_ms: [200, 2000]
+      browser_emulation: true
+      noisy_payloads: false
+    tactical:
+      enabled: true
+      max_rps_per_host: 10
+      jitter_ms: [50, 500]
+      browser_emulation: true
+      noisy_payloads: limited
+    warfare:
+      enabled: true
+      max_rps_per_host: 20
+      jitter_ms: [0, 150]
+      browser_emulation: optional
+      noisy_payloads: true
+
+evidence:
+  hash_chain:
+    enabled: true
+    algorithm: sha256
+    segment_size_mb: 16
+    verify_pre_run: true
+    verify_post_run: true
+  screenshot: true
+  request_response_capture: true
+  pcap_correlation: true
+  log_correlation: true
+
+reporting:
+  scoreboard_csv: "/opt/levlab/artifacts/scoreboard.csv"
+  findings_json: "/opt/levlab/artifacts/findings.json"
+  evidence_dir: "/opt/levlab/artifacts/evidence"
+  grafana_snapshot_dir: "/opt/levlab/artifacts/grafana"
+  defensive_exports_dir: "/opt/levlab/artifacts/defensive"
+
+kill_switches:
+  - type: file
+    path: "/opt/levlab/KILL_SWITCH"
+  - type: http
+    url: "https://lab.${BASE_DOMAIN}/kill-switch"

@@ -1,0 +1,24 @@
+myhostname = mail.lab.local
+mydomain = lab.local
+myorigin = $mydomain
+inet_interfaces = all
+mydestination = $myhostname, localhost.$mydomain, localhost, $mydomain
+mynetworks = 0.0.0.0/0
+
+# Intentional: STARTTLS is optional not mandatory
+smtpd_tls_security_level = may
+smtp_tls_security_level  = may
+
+# Intentional: VRFY and EXPN enabled (user enumeration)
+disable_vrfy_command = no
+smtpd_discard_ehlo_keywords =
+
+# Intentional: weak SASL with plaintext allowed
+smtpd_sasl_auth_enable = yes
+smtpd_sasl_security_options = noanonymous
+smtpd_sasl_local_domain =
+smtpd_recipient_restrictions = permit_sasl_authenticated,permit_mynetworks,reject_unauth_destination
+
+# Intentional: no rate limiting
+smtpd_client_connection_rate_limit = 0
+anvil_rate_time_unit = 60s

@@ -1,0 +1,8 @@
+{
+  "keycloak_realm": "leviathan-lab",
+  "keycloak_server": "http://keycloak-weak:8080",
+  "keycloak_client_id": "api-services",
+  "keycloak_client_secret": "fixture-weak-secret-123",
+  "token_endpoint": "http://keycloak-weak:8080/realms/leviathan-lab/protocol/openid-connect/token",
+  "jwks_uri": "http://keycloak-weak:8080/realms/leviathan-lab/protocol/openid-connect/certs"
+}

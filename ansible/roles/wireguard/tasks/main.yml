@@ -1,0 +1,33 @@
+---
+# Role: wireguard
+# Configure wg0 server interface + lock sshd to wg0 address.
+
+- name: Deploy wg0 config
+  ansible.builtin.template:
+    src: wg0.conf.j2
+    dest: /etc/wireguard/wg0.conf
+    owner: root
+    group: root
+    mode: "0600"
+  notify: restart wg0
+
+- name: Enable and start wg0
+  ansible.builtin.systemd:
+    name: wg-quick@wg0
+    enabled: true
+    state: started
+
+- name: Deploy sshd_config drop-in for wg0 binding
+  ansible.builtin.template:
+    src: 99-levlab.conf.j2
+    dest: /etc/ssh/sshd_config.d/99-levlab.conf
+    owner: root
+    group: root
+    mode: "0600"
+  notify: restart sshd
+
+- name: Verify wg0 is up
+  ansible.builtin.command: wg show wg0
+  register: wg_status
+  changed_when: false
+  failed_when: wg_status.rc != 0

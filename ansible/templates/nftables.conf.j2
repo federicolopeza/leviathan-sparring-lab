@@ -1,0 +1,75 @@
+#!/usr/sbin/nft -f
+# Leviathan Sparring Lab — nftables ruleset
+# inet levlab table: input/forward/output + Docker bridge rules + egress lock
+
+flush ruleset
+
+table inet levlab {
+
+  chain input {
+    type filter hook input priority 0; policy drop;
+
+    # Loopback
+    iif lo accept
+
+    # Established/related
+    ct state established,related accept
+
+    # WireGuard (UDP 51820 from operator only)
+    ip protocol udp ip saddr {{ operator_public_ip }}/32 udp dport 51820 accept
+
+    # SSH from operator bootstrap (removed after Ansible wires wg0)
+    ip protocol tcp ip saddr {{ operator_public_ip }}/32 tcp dport 22 accept
+
+    # SSH over wg0 tunnel
+    iif wg0 ip protocol tcp tcp dport 22 accept
+
+    # ICMP (limit rate to avoid ping flood)
+    ip protocol icmp icmp type echo-request limit rate 10/second accept
+
+    # Drop everything else
+    drop
+  }
+
+  chain forward {
+    type filter hook forward priority 0; policy drop;
+
+    # Allow Docker bridge forwarding (Docker manages DOCKER chain)
+    ct state established,related accept
+
+    # Allow forwarding within Docker networks
+    iif br+ accept
+    oif br+ accept
+
+    # Allow forwarding between pivot_net and other networks (lateral movement surface)
+    ip saddr 172.31.200.0/24 accept
+    ip daddr 172.31.200.0/24 accept
+
+    drop
+  }
+
+  chain output {
+    type filter hook output priority 0; policy accept;
+
+    # Block Vultr metadata endpoint (applied post-cloud-init)
+    ip daddr 169.254.169.254 drop
+
+    # Egress lock: only DNS, NTP, Cloudflare tunnel (QUIC 7844 + HTTPS 443), WG
+    # Remove this comment block when transitioning to locked egress after Ansible completes
+    # ip protocol tcp tcp dport != { 22, 80, 443, 7844 } drop
+    # ip protocol udp udp dport != { 53, 123, 51820 } drop
+  }
+
+  # DOCKER-USER chain — controls traffic to Docker containers
+  chain DOCKER-USER {
+    type filter hook forward priority -1; policy accept;
+
+    # Block access to container networks from public internet
+    # Allow from wg0 (operator) and established
+    ct state established,related return
+    iif wg0 return
+
+    # Drop public traffic attempting to reach Docker bridges directly
+    iif != lo ip saddr != 10.88.0.0/24 ip daddr 172.31.0.0/16 drop
+  }
+}

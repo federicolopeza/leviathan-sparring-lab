@@ -1,0 +1,54 @@
+---
+# Role: kill-switch
+# Deploy traefik/dynamic/kill-switch.yml on the server, verify 503 roundtrip.
+# Fails the Ansible run if kill-switch does not respond 503.
+
+- name: Create Traefik dynamic config directory on server
+  ansible.builtin.file:
+    path: /opt/levlab/traefik/dynamic
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy kill-switch Traefik dynamic config
+  ansible.builtin.template:
+    src: traefik-kill-switch.yml.j2
+    dest: /opt/levlab/traefik/dynamic/kill-switch.yml
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload traefik
+
+- name: Create KILL_SWITCH file marker for smoke test validation
+  ansible.builtin.copy:
+    content: ""
+    dest: /opt/levlab/KILL_SWITCH
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Wait 3s for Traefik to reload
+  ansible.builtin.pause:
+    seconds: 3
+
+- name: Verify kill-switch returns 503 (smoke gate)
+  ansible.builtin.uri:
+    url: "https://lab.{{ base_domain }}/kill-switch"
+    method: GET
+    status_code: 503
+    validate_certs: false
+  register: ks_check
+  retries: 5
+  delay: 3
+  until: ks_check.status == 503
+  failed_when: ks_check.status != 503
+
+- name: Remove KILL_SWITCH file marker after validation
+  ansible.builtin.file:
+    path: /opt/levlab/KILL_SWITCH
+    state: absent
+
+- name: Confirm kill-switch wired correctly
+  ansible.builtin.debug:
+    msg: "[OK] Kill-switch 503 roundtrip verified. Operator can raise via scripts/kill.sh."

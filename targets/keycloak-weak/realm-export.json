@@ -1,0 +1,49 @@
+{
+  "id": "lab",
+  "realm": "lab",
+  "displayName": "Leviathan Lab Realm",
+  "enabled": true,
+  "registrationAllowed": true,
+  "resetPasswordAllowed": true,
+  "bruteForceProtected": false,
+  "passwordPolicy": "length(1)",
+  "clients": [
+    {
+      "clientId": "lab-app",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
+      "secret": "lab-client-secret-weak-000000001"
+    },
+    {
+      "clientId": "admin-cli-lab",
+      "enabled": true,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "secret": "admin-cli-secret-weak-000000001"
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "credentials": [{"type": "password", "value": "admin", "temporary": false}],
+      "realmRoles": ["offline_access", "uma_authorization"]
+    },
+    {
+      "username": "labuser",
+      "enabled": true,
+      "credentials": [{"type": "password", "value": "password123", "temporary": false}]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {"name": "admin", "composite": false},
+      {"name": "user",  "composite": false}
+    ]
+  }
+}

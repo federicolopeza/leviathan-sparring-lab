@@ -1,0 +1,55 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<!--
+  Fixture Jenkins job — deliberate stored credential for canary chain testing
+  Chain: GT-JNK-004 (this stored cred) → GT-MINIO-003 (MinIO lateral access)
+-->
+<project>
+  <description>Production deployment pipeline for dev-platform service</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.plugins.git.GitSCM" plugin="git@4.11.3">
+    <configVersion>2</configVersion>
+    <userRemoteConfigs>
+      <hudson.plugins.git.UserRemoteConfig>
+        <url>http://gitea-secrets:3000/platform/dev-platform.git</url>
+        <credentialsId>gitea-platform-token</credentialsId>
+      </hudson.plugins.git.UserRemoteConfig>
+    </userRemoteConfigs>
+    <branches>
+      <hudson.plugins.git.BranchSpec>
+        <name>*/main</name>
+      </hudson.plugins.git.BranchSpec>
+    </branches>
+  </scm>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>
+#!/bin/bash
+set -euo pipefail
+
+echo "=== Deploying to production ==="
+
+# Retrieve MinIO credentials from Jenkins credential store (ID: minio-deploy)
+MINIO_KEY=$(cat /run/secrets/minio_access_key 2>/dev/null || echo "$MINIO_ACCESS_KEY")
+MINIO_SECRET=$(cat /run/secrets/minio_secret_key 2>/dev/null || echo "$MINIO_SECRET_KEY")
+
+mc alias set labminio http://minio-open:9000 "$MINIO_KEY" "$MINIO_SECRET"
+mc cp target/app.jar labminio/finance-private/deployments/app-latest.jar
+
+echo "=== Deploy complete ==="
+      </command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers>
+    <org.jenkinsci.plugins.credentialsbinding.impl.SecretBuildWrapper plugin="credentials-binding@1.27">
+      <bindings>
+        <org.jenkinsci.plugins.credentialsbinding.impl.UsernamePasswordMultiBinding>
+          <credentialsId>minio-deploy</credentialsId>
+          <usernameVariable>MINIO_ACCESS_KEY</usernameVariable>
+          <passwordVariable>MINIO_SECRET_KEY</passwordVariable>
+        </org.jenkinsci.plugins.credentialsbinding.impl.UsernamePasswordMultiBinding>
+      </bindings>
+    </org.jenkinsci.plugins.credentialsbinding.impl.SecretBuildWrapper>
+  </buildWrappers>
+</project>

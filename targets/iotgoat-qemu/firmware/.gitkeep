@@ -1,0 +1,2 @@
+# Operator: place IoTGoat firmware image here before docker build.
+# Download from: https://github.com/OWASP/IoTGoat/releases/download/v1.0/IoTGoat-raspberry-pi2.img

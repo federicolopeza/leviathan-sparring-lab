@@ -1,0 +1,91 @@
+---
+# Role: cloudflared
+# Install cloudflared binary, configure tunnel, deploy hardened systemd unit.
+
+- name: Download cloudflared binary
+  ansible.builtin.get_url:
+    url: https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+    dest: /usr/local/bin/cloudflared
+    mode: "0755"
+    owner: root
+    group: root
+  args:
+    creates: /usr/local/bin/cloudflared
+
+- name: Create cloudflared config directory
+  ansible.builtin.file:
+    path: /etc/cloudflared
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy cloudflared config
+  ansible.builtin.template:
+    src: cloudflared-config.yml.j2
+    dest: /etc/cloudflared/config.yml
+    owner: root
+    group: root
+    mode: "0640"
+  notify: restart cloudflared
+
+- name: Create cloudflared credentials file from tunnel token
+  ansible.builtin.copy:
+    content: "{{ cf_tunnel_token }}"
+    dest: /etc/cloudflared/tunnel-token
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Deploy cloudflared systemd unit
+  ansible.builtin.copy:
+    content: |
+      [Unit]
+      Description=Cloudflare Tunnel
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/local/bin/cloudflared tunnel --config /etc/cloudflared/config.yml run
+      Restart=on-failure
+      RestartSec=5s
+      # Hardening
+      NoNewPrivileges=true
+      ProtectSystem=strict
+      ProtectHome=true
+      PrivateTmp=true
+      ReadWritePaths=/var/log/cloudflared
+      CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/cloudflared.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart cloudflared
+
+- name: Create cloudflared log directory
+  ansible.builtin.file:
+    path: /var/log/cloudflared
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Enable and start cloudflared
+  ansible.builtin.systemd:
+    name: cloudflared
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Wait for cloudflared to be healthy (30s)
+  ansible.builtin.wait_for:
+    port: 60123
+    host: 127.0.0.1
+    delay: 5
+    timeout: 60

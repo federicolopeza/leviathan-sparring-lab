@@ -1,0 +1,8 @@
+---
+# Role: kill-switch — handlers
+
+  - name: reload traefik
+    ansible.builtin.command: docker compose -f /opt/levlab/docker-compose.yml kill -s HUP traefik
+    args:
+      chdir: /opt/levlab
+    changed_when: false

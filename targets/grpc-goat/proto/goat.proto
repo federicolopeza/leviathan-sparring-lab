@@ -1,0 +1,18 @@
+syntax = "proto3";
+package goat;
+option go_package = "grpc-goat/proto";
+
+// GoatService — intentionally insecure: reflection on, no auth, all methods public
+service GoatService {
+  rpc GetSecret (SecretRequest) returns (SecretResponse);
+  rpc ListUsers (Empty) returns (UserList);
+  rpc ExecCommand (CommandRequest) returns (CommandResponse);
+}
+
+message Empty {}
+message SecretRequest  { string key = 1; }
+message SecretResponse { string value = 1; string internal_note = 2; }
+message UserList       { repeated User users = 1; }
+message User           { int32 id = 1; string name = 2; string email = 3; string password_hash = 4; }
+message CommandRequest { string cmd = 1; repeated string args = 2; }
+message CommandResponse{ int32 exit_code = 1; string stdout = 2; string stderr = 3; }

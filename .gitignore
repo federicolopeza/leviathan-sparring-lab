@@ -1,0 +1,40 @@
+# Secrets — NEVER commit
+.env.lab
+*.rotated.*
+
+# Terraform state
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfstate.*.backup
+.terraform/
+.terraform.lock.hcl
+
+# Runtime artifacts
+/tmp/
+artifacts/
+engagements/
+
+# Network captures
+*.pcap
+*.pcapng
+
+# Ansible runtime
+ansible/inventory.ini
+ansible/*.retry
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

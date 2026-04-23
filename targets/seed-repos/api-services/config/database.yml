@@ -1,0 +1,29 @@
+# Rails database configuration
+# Fixture: deliberate credential leak for postgres-open canary chain testing
+
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+
+development:
+  <<: *default
+  database: api_services_development
+  host: localhost
+  username: postgres
+  password:
+
+test:
+  <<: *default
+  database: api_services_test
+  host: localhost
+  username: postgres
+  password:
+
+production:
+  <<: *default
+  host: postgres-open
+  database: app
+  username: app
+  password: app
+  # NOTE: postgres-open uses trust auth — password field irrelevant but kept for clarity

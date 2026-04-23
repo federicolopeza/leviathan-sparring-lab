@@ -1,0 +1,1134 @@
+# ground_truth/ground_truth.yml
+# Leviathan Sparring Lab — empirical recall/precision benchmark dataset
+# 131 entries · 28 stacks · 11 cross-stack chains
+# Generated: 2026-04-23 — DO NOT EDIT BY HAND (use scripts/validate-ground-truth.py)
+
+version: "2026-04-23"
+engagement_profile: leviathan-sparring-lab-24h
+total_entries: 131
+cross_stack_chains: 11
+
+stacks:
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # A. CMS / WEB CLÁSICO / APPSEC  (39 entries across 11 stacks)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  wordpress-cve:
+    expected:
+      - id: GT-WP-001
+        type: cve
+        value: Cross-site scripting via crafted image filename (CVE-2019-8942)
+        severity: critical
+        cve_id: CVE-2019-8942
+        expected_skill: /pentest
+        expected_chain: wordpress
+        confirmation_method: exec_output
+      - id: GT-WP-002
+        type: cve
+        value: Arbitrary file upload via path traversal in filename (CVE-2019-8943)
+        severity: high
+        cve_id: CVE-2019-8943
+        expected_skill: /pentest
+        expected_chain: wordpress
+        confirmation_method: exec_output
+      - id: GT-WP-003
+        type: misconfig
+        value: XML-RPC endpoint enabled — allows user enumeration and brute-force
+        severity: medium
+        expected_skill: /pentest
+        expected_chain: wordpress
+        confirmation_method: status_code
+      - id: GT-WP-004
+        type: auth
+        value: Weak admin credentials (admin:admin) allow dashboard takeover
+        severity: high
+        expected_skill: /pentest
+        expected_chain: wordpress
+        confirmation_method: auth_success
+      - id: GT-WP-005
+        type: exposure
+        value: wp-config.php.bak accessible at web root
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: wordpress
+        confirmation_method: response_body
+
+  drupal-cve:
+    expected:
+      - id: GT-DRUPAL-001
+        type: cve
+        value: Remote code execution via unauth form render (Drupalgeddon2 CVE-2018-7600)
+        severity: critical
+        cve_id: CVE-2018-7600
+        expected_skill: /pentest
+        expected_chain: generic_web
+        confirmation_method: exec_output
+      - id: GT-DRUPAL-002
+        type: exposure
+        value: /user/register endpoint leaks username existence via error message
+        severity: medium
+        expected_skill: /pentest
+        expected_chain: generic_web
+        confirmation_method: response_body
+      - id: GT-DRUPAL-003
+        type: misconfig
+        value: Admin panel accessible at /admin without IP restriction
+        severity: high
+        expected_skill: /pentest
+        expected_chain: generic_web
+        confirmation_method: status_code
+
+  joomla-cve:
+    expected:
+      - id: GT-JOM-001
+        type: cve
+        value: Remote code execution via browser object deserialization (CVE-2015-8562)
+        severity: critical
+        cve_id: CVE-2015-8562
+        expected_skill: /pentest
+        expected_chain: php
+        confirmation_method: exec_output
+      - id: GT-JOM-002
+        type: exposure
+        value: /administrator exposed — no login rate-limit or lockout
+        severity: medium
+        expected_skill: /pentest
+        expected_chain: php
+        confirmation_method: status_code
+      - id: GT-JOM-003
+        type: misconfig
+        value: Debug mode enabled in configuration.php — stack traces leak path info
+        severity: low
+        expected_skill: /pentest
+        expected_chain: php
+        confirmation_method: response_body
+
+  dvwa:
+    expected:
+      - id: GT-DVWA-001
+        type: injection
+        value: SQL injection in login form — blind time-based and error-based
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: php
+        confirmation_method: time_blind
+      - id: GT-DVWA-002
+        type: xss
+        value: Reflected XSS in search parameter (low security level)
+        severity: high
+        expected_skill: /pentest
+        expected_chain: generic_web
+        confirmation_method: response_body
+      - id: GT-DVWA-003
+        type: injection
+        value: OS command injection via ping utility (low security level)
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: generic_web
+        confirmation_method: exec_output
+      - id: GT-DVWA-004
+        type: logic
+        value: File upload — PHP webshell upload allowed (low security level)
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: generic_web
+        confirmation_method: exec_output
+
+  bwapp:
+    expected:
+      - id: GT-BWAPP-001
+        type: xxe
+        value: XXE via XML body in bee-box /bWAPP/xmli.php
+        severity: high
+        expected_skill: /pentest
+        expected_chain: php
+        confirmation_method: response_body
+      - id: GT-BWAPP-002
+        type: injection
+        value: SSTI in PHP template injection challenge (/bWAPP/php-ssti.php)
+        severity: high
+        expected_skill: /web-hunter
+        expected_chain: php
+        confirmation_method: exec_output
+
+  webgoat:
+    expected:
+      - id: GT-WG-001
+        type: injection
+        value: SQL injection — login bypass via classic 1=1 payload (A1)
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: generic_web
+        confirmation_method: auth_success
+      - id: GT-WG-002
+        type: xxe
+        value: XXE injection via comment body in WebGoat XXE lesson (A4)
+        severity: high
+        expected_skill: /pentest
+        expected_chain: generic_web
+        confirmation_method: response_body
+      - id: GT-WG-003
+        type: idor
+        value: Insecure direct object reference — access other user profiles (A5)
+        severity: high
+        expected_skill: /business-logic-audit
+        expected_chain: generic_web
+        confirmation_method: response_body
+      - id: GT-WG-004
+        type: logic
+        value: Business logic flaw — buy item at negative price (shopping lesson)
+        severity: critical
+        expected_skill: /business-logic-audit
+        expected_chain: generic_web
+        confirmation_method: db_write
+      - id: GT-WG-005
+        type: exposure
+        value: Sensitive data exposure — JWT with hardcoded secret (A3)
+        severity: high
+        expected_skill: /pentest
+        expected_chain: generic_web
+        confirmation_method: response_body
+
+  mutillidae:
+    expected:
+      - id: GT-MUTIL-001
+        type: injection
+        value: SQL injection in user lookup — UNION-based data extraction
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: php
+        confirmation_method: response_body
+      - id: GT-MUTIL-003
+        type: auth
+        value: Login bypass via SQL injection — admin:' OR '1'='1
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: php
+        confirmation_method: auth_success
+
+  juice-shop:
+    expected:
+      - id: GT-JS-001
+        type: auth
+        value: JWT secret brute-force — alg:HS256 with weak key "secret"
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: juice_shop
+        confirmation_method: auth_success
+      - id: GT-JS-002
+        type: injection
+        value: NoSQL injection in product search — login bypass via email field
+        severity: critical
+        expected_skill: /web-hunter
+        expected_chain: juice_shop
+        confirmation_method: auth_success
+      - id: GT-JS-003
+        type: idor
+        value: IDOR on order basket — access other user orders via numeric ID
+        severity: high
+        expected_skill: /business-logic-audit
+        expected_chain: juice_shop
+        confirmation_method: response_body
+      - id: GT-JS-004
+        type: xss
+        value: DOM-based XSS via search parameter — script tag in page title
+        severity: high
+        expected_skill: /pentest
+        expected_chain: juice_shop
+        confirmation_method: response_body
+      - id: GT-JS-005
+        type: exposure
+        value: FTP directory listing exposes acquisition.md and incident-support.kdbx
+        severity: high
+        expected_skill: /pentest
+        expected_chain: juice_shop
+        confirmation_method: bucket_list
+
+  django-goat:
+    expected:
+      - id: GT-DJANGO-001
+        type: exposure
+        value: Django DEBUG=True leaks settings, installed apps, and exception trace
+        severity: high
+        expected_skill: /pentest
+        expected_chain: django
+        confirmation_method: response_body
+      - id: GT-DJANGO-002
+        type: injection
+        value: SQL injection via raw() call in search view — error-based extraction
+        severity: critical
+        expected_skill: /web-hunter
+        expected_chain: django
+        confirmation_method: response_body
+      - id: GT-DJANGO-003
+        type: auth
+        value: Admin credentials default (admin:password) — /admin/ dashboard access
+        severity: high
+        expected_skill: /pentest
+        expected_chain: django
+        confirmation_method: auth_success
+
+  railsgoat:
+    expected:
+      - id: GT-RAILS-001
+        type: logic
+        value: Mass assignment — update user.admin via crafted PATCH request
+        severity: critical
+        expected_skill: /business-logic-audit
+        expected_chain: rails
+        confirmation_method: auth_success
+      - id: GT-RAILS-002
+        type: ssrf
+        value: SSRF via employee avatar URL — reaches internal metadata endpoint
+        severity: high
+        expected_skill: /web-hunter
+        expected_chain: rails
+        confirmation_method: response_body
+      - id: GT-RAILS-003
+        type: injection
+        value: OS command injection via user-supplied filename in convert_to_pdf
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: rails
+        confirmation_method: exec_output
+
+  spring-petclinic-vuln:
+    expected:
+      - id: GT-SPRING-001
+        type: exposure
+        value: Spring Boot Actuator /env endpoint leaks all application properties
+        severity: high
+        expected_skill: /pentest
+        expected_chain: spring
+        confirmation_method: response_body
+      - id: GT-SPRING-002
+        type: exposure
+        value: H2 console accessible at /h2-console with default credentials
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: spring
+        confirmation_method: exec_output
+      - id: GT-SPRING-003
+        type: ssrf
+        value: SSRF via Spring WebClient in /proxy endpoint — internal service access
+        severity: high
+        expected_skill: /web-hunter
+        expected_chain: spring
+        confirmation_method: response_body
+        notes: "chain target — GT-SPRING-003 → GT-METADATA-001 via SSRF-to-metadata"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # B. APIs / GraphQL / gRPC / Go / .NET  (24 entries across 6 stacks)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  vampi:
+    expected:
+      - id: GT-VAMPI-001
+        type: idor
+        value: BOLA — access any user resource by changing numeric ID in path
+        severity: high
+        expected_skill: /api-audit
+        expected_chain: api_rest
+        confirmation_method: response_body
+      - id: GT-VAMPI-002
+        type: auth
+        value: Broken authentication — JWT none algorithm accepted on /tokens endpoint
+        severity: critical
+        expected_skill: /api-audit
+        expected_chain: api_rest
+        confirmation_method: auth_success
+      - id: GT-VAMPI-003
+        type: exposure
+        value: Excessive data exposure — GET /users returns all fields including hashed passwords
+        severity: high
+        expected_skill: /api-audit
+        expected_chain: api_rest
+        confirmation_method: response_body
+      - id: GT-VAMPI-004
+        type: logic
+        value: Missing rate limiting on /tokens — unlimited login attempts allowed
+        severity: medium
+        expected_skill: /api-audit
+        expected_chain: api_rest
+        confirmation_method: response_body
+
+  dvga:
+    expected:
+      - id: GT-DVGA-001
+        type: exposure
+        value: GraphQL introspection enabled — full schema enumerable
+        severity: low
+        expected_skill: /api-audit
+        expected_chain: api_graphql
+        confirmation_method: response_body
+      - id: GT-DVGA-002
+        type: idor
+        value: Resolver-level IDOR on user.paste(id) — access private pastes by ID
+        severity: high
+        expected_skill: /api-audit
+        expected_chain: api_graphql
+        confirmation_method: response_body
+      - id: GT-DVGA-003
+        type: logic
+        value: No query depth limit — nested query DoS reachable
+        severity: medium
+        expected_skill: /api-audit
+        expected_chain: api_graphql
+        confirmation_method: time_blind
+      - id: GT-DVGA-004
+        type: injection
+        value: SQL injection in user search resolver — error-based data extraction
+        severity: critical
+        expected_skill: /api-audit
+        expected_chain: api_graphql
+        confirmation_method: exec_output
+
+  crapi:
+    expected:
+      - id: GT-CRAPI-001
+        type: idor
+        value: BOLA — access other user vehicle data via vehicle_id tampering
+        severity: high
+        expected_skill: /api-audit
+        expected_chain: api_rest
+        confirmation_method: response_body
+      - id: GT-CRAPI-002
+        type: auth
+        value: Broken auth — JWT none alg on /community/api/v2/coupon/validate-coupon
+        severity: critical
+        expected_skill: /api-audit
+        expected_chain: api_rest
+        confirmation_method: auth_success
+      - id: GT-CRAPI-003
+        type: logic
+        value: Mass assignment — video upload accepts user-controlled conversion_params
+        severity: high
+        expected_skill: /business-logic-audit
+        expected_chain: api_rest
+        confirmation_method: response_body
+      - id: GT-CRAPI-004
+        type: ssrf
+        value: SSRF via file_url in /community video upload — reaches internal endpoints
+        severity: high
+        expected_skill: /api-audit
+        expected_chain: api_rest
+        confirmation_method: response_body
+
+  grpc-goat:
+    expected:
+      - id: GT-GRPC-001
+        type: exposure
+        value: gRPC server reflection enabled — full service enumeration possible
+        severity: medium
+        expected_skill: /api-audit
+        expected_chain: go
+        confirmation_method: response_body
+      - id: GT-GRPC-002
+        type: auth
+        value: Missing authentication on admin service methods — direct access
+        severity: critical
+        expected_skill: /api-audit
+        expected_chain: go
+        confirmation_method: auth_success
+      - id: GT-GRPC-004
+        type: misconfig
+        value: gRPC transport without TLS — credentials transmitted plaintext
+        severity: high
+        expected_skill: /api-audit
+        expected_chain: go
+        confirmation_method: response_body
+
+  dotnet-goat:
+    expected:
+      - id: GT-DOTNET-001
+        type: injection
+        value: Insecure deserialization via BinaryFormatter in object parameter
+        severity: critical
+        expected_skill: /web-hunter
+        expected_chain: dotnet
+        confirmation_method: exec_output
+      - id: GT-DOTNET-002
+        type: ssrf
+        value: SSRF in image download endpoint — reaches internal services via URL param
+        severity: high
+        expected_skill: /web-hunter
+        expected_chain: dotnet
+        confirmation_method: response_body
+      - id: GT-DOTNET-003
+        type: idor
+        value: IDOR on /api/users/{id}/profile — no ownership check
+        severity: high
+        expected_skill: /api-audit
+        expected_chain: dotnet
+        confirmation_method: response_body
+      - id: GT-DOTNET-004
+        type: auth
+        value: JWT weak signing key — HS256 with key "dotnet123" crackable offline
+        severity: critical
+        expected_skill: /api-audit
+        expected_chain: dotnet
+        confirmation_method: auth_success
+
+  go-fuzz-svc:
+    expected:
+      - id: GT-GO-001
+        type: logic
+        value: HTTP request smuggling via CL.TE confusion in reverse proxy path
+        severity: high
+        expected_skill: /deep-hunter
+        expected_chain: go
+        confirmation_method: response_body
+      - id: GT-GO-002
+        type: exposure
+        value: Debug pprof endpoint /debug/pprof exposed in production build
+        severity: medium
+        expected_skill: /pentest
+        expected_chain: go
+        confirmation_method: status_code
+      - id: GT-GO-003
+        type: injection
+        value: Integer overflow in parser causes nil dereference — crash via fuzzing
+        severity: high
+        expected_skill: /deep-hunter
+        expected_chain: zero_day_research
+        confirmation_method: exec_output
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # C. IDENTITY / SAML / SaaS  (16 entries across 4 stacks)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  keycloak-weak:
+    expected:
+      - id: GT-KC-001
+        type: misconfig
+        value: Default master realm admin console exposed without IP allowlist
+        severity: high
+        expected_skill: /identity-attacks
+        expected_chain: identity_attacks
+        confirmation_method: status_code
+      - id: GT-KC-002
+        type: exposure
+        value: Realm list leaks all realm names via /auth/realms endpoint
+        severity: low
+        expected_skill: /identity-attacks
+        expected_chain: identity_attacks
+        confirmation_method: response_body
+      - id: GT-KC-003
+        type: misconfig
+        value: Client with wildcard redirect URI configured — open redirect token theft
+        severity: high
+        expected_skill: /identity-attacks
+        expected_chain: identity_attacks
+        confirmation_method: auth_success
+      - id: GT-KC-004
+        type: auth
+        value: Weak admin credentials (admin:admin) on master realm
+        severity: critical
+        expected_skill: /identity-attacks
+        expected_chain: identity_attacks
+        confirmation_method: auth_success
+        notes: "multi-stack chain — requires GT-OAUTH-002 open redirect first"
+
+  oauth-lab:
+    expected:
+      - id: GT-OAUTH-001
+        type: auth
+        value: Authorization code flow accepts implicit grant without PKCE
+        severity: high
+        expected_skill: /identity-attacks
+        expected_chain: identity_attacks
+        confirmation_method: auth_success
+      - id: GT-OAUTH-002
+        type: logic
+        value: Open redirect in redirect_uri parameter — allows token theft via referrer
+        severity: high
+        expected_skill: /identity-attacks
+        expected_chain: identity_attacks
+        confirmation_method: response_body
+        notes: "chain origin — GT-OAUTH-002 → GT-KC-004 (Keycloak token theft via open redirect)"
+      - id: GT-OAUTH-003
+        type: exposure
+        value: Weak JWKS — RSA key 1024-bit, offline crackable
+        severity: high
+        expected_skill: /identity-attacks
+        expected_chain: identity_attacks
+        confirmation_method: response_body
+      - id: GT-OAUTH-004
+        type: misconfig
+        value: Token endpoint allows password grant without client authentication
+        severity: medium
+        expected_skill: /identity-attacks
+        expected_chain: identity_attacks
+        confirmation_method: auth_success
+
+  saml-target:
+    expected:
+      - id: GT-SAML-001
+        type: auth
+        value: SAML response accepts unsigned assertions — forgeable identity claims
+        severity: critical
+        expected_skill: /identity-attacks
+        expected_chain: identity_attacks
+        confirmation_method: auth_success
+        notes: "chain origin — GT-SAML-001 → GT-SAAS-001 (unsigned assertion → tenant pivot)"
+      - id: GT-SAML-002
+        type: xxe
+        value: XXE in SAML XML parser — local file read via external entity
+        severity: high
+        expected_skill: /identity-attacks
+        expected_chain: identity_attacks
+        confirmation_method: response_body
+      - id: GT-SAML-003
+        type: misconfig
+        value: ACS URL accepts any redirect — CSRF via forged POST to assertions endpoint
+        severity: high
+        expected_skill: /identity-attacks
+        expected_chain: identity_attacks
+        confirmation_method: response_body
+      - id: GT-SAML-004
+        type: exposure
+        value: Weak audience restriction — assertion valid across all service providers
+        severity: medium
+        expected_skill: /identity-attacks
+        expected_chain: identity_attacks
+        confirmation_method: auth_success
+
+  tenant-billing-api:
+    expected:
+      - id: GT-TENANT-001
+        type: idor
+        value: Horizontal privilege escalation — access other tenant invoices via tenant_id
+        severity: critical
+        expected_skill: /business-logic-audit
+        expected_chain: saas_exploitation
+        confirmation_method: response_body
+        notes: "multi-stack chain — requires GT-KC-004 Keycloak weak admin first"
+      - id: GT-TENANT-002
+        type: logic
+        value: Invitation flow bypass — enumerate valid invite tokens via timing oracle
+        severity: high
+        expected_skill: /business-logic-audit
+        expected_chain: saas_exploitation
+        confirmation_method: time_blind
+      - id: GT-TENANT-003
+        type: auth
+        value: Tenant isolation broken — JWT sub claim tampering grants cross-tenant access
+        severity: critical
+        expected_skill: /identity-attacks
+        expected_chain: saas_exploitation
+        confirmation_method: response_body
+      - id: GT-TENANT-004
+        type: exposure
+        value: Admin /internal/tenants endpoint leaks all tenant billing data unauthenticated
+        severity: critical
+        expected_skill: /api-audit
+        expected_chain: saas_exploitation
+        confirmation_method: response_body
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # D. CI/CD / SUPPLY CHAIN  (19 entries across 5 stacks)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  jenkins-old:
+    expected:
+      - id: GT-JNK-001
+        type: cve
+        value: Unauthenticated RCE via unsafe Stapler routing proxy (CVE-2018-1000861)
+        severity: critical
+        cve_id: CVE-2018-1000861
+        expected_skill: /pentest
+        expected_chain: cicd_supply_chain
+        confirmation_method: exec_output
+      - id: GT-JNK-002
+        type: exposure
+        value: Script console accessible — executes Groovy as OS user
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: cicd_supply_chain
+        confirmation_method: exec_output
+      - id: GT-JNK-003
+        type: secret
+        value: master.key copy in $JENKINS_HOME/secrets/ accessible via directory listing
+        severity: critical
+        expected_skill: /source-audit
+        expected_chain: cicd_supply_chain
+        confirmation_method: response_body
+      - id: GT-JNK-004
+        type: secret
+        value: Stored credential points to minio-open access key (minio-deploy cred ID)
+        severity: critical
+        expected_skill: /supply-chain
+        expected_chain: cicd_supply_chain
+        confirmation_method: bucket_list
+        notes: "chain origin — GT-JNK-004 → GT-MINIO-003 (Jenkins cred → MinIO lateral)"
+
+  gitlab-ce-old:
+    expected:
+      - id: GT-GITLAB-001
+        type: cve
+        value: Remote code execution via ExifTool JPEG metadata injection (CVE-2021-22205)
+        severity: critical
+        cve_id: CVE-2021-22205
+        expected_skill: /pentest
+        expected_chain: cicd_supply_chain
+        confirmation_method: exec_output
+      - id: GT-GITLAB-002
+        type: exposure
+        value: GitLab API token leaked in CI/CD environment variable LOG_LEVEL output
+        severity: high
+        expected_skill: /supply-chain
+        expected_chain: cicd_supply_chain
+        confirmation_method: response_body
+      - id: GT-GITLAB-003
+        type: misconfig
+        value: Public projects allow unauthenticated repository clone
+        severity: medium
+        expected_skill: /supply-chain
+        expected_chain: cicd_supply_chain
+        confirmation_method: response_body
+      - id: GT-GITLAB-004
+        type: auth
+        value: Default root:5iveL!fe credentials not rotated on fresh install
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: cicd_supply_chain
+        confirmation_method: auth_success
+      - id: GT-GITLAB-005
+        type: secret
+        value: database.yml in api-services repo contains postgres-open plaintext creds
+        severity: critical
+        expected_skill: /supply-chain
+        expected_chain: cicd_supply_chain
+        confirmation_method: response_body
+        notes: "chain origin — GT-GITLAB-005 → GT-PG-002 (database.yml creds → postgres canary)"
+
+  nexus-old:
+    expected:
+      - id: GT-NEXUS-001
+        type: cve
+        value: Remote code execution via EL injection in OrientDB (CVE-2020-10199)
+        severity: critical
+        cve_id: CVE-2020-10199
+        expected_skill: /pentest
+        expected_chain: cicd_supply_chain
+        confirmation_method: exec_output
+      - id: GT-NEXUS-002
+        type: auth
+        value: Default admin:admin123 credentials not changed post-install
+        severity: high
+        expected_skill: /pentest
+        expected_chain: cicd_supply_chain
+        confirmation_method: auth_success
+      - id: GT-NEXUS-003
+        type: exposure
+        value: Anonymous access to hosted repos — artifact download without auth
+        severity: medium
+        expected_skill: /supply-chain
+        expected_chain: cicd_supply_chain
+        confirmation_method: response_body
+      - id: GT-NEXUS-004
+        type: misconfig
+        value: Nexus IQ application license file leaked via /service/rest/v1/system/license
+        severity: low
+        expected_skill: /pentest
+        expected_chain: cicd_supply_chain
+        confirmation_method: response_body
+
+  sonarqube-old:
+    expected:
+      - id: GT-SONAR-001
+        type: cve
+        value: Unauthenticated token generation via API (CVE-2020-27986)
+        severity: critical
+        cve_id: CVE-2020-27986
+        expected_skill: /pentest
+        expected_chain: cicd_supply_chain
+        confirmation_method: response_body
+      - id: GT-SONAR-002
+        type: auth
+        value: Default admin:admin credentials active — full platform control
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: cicd_supply_chain
+        confirmation_method: auth_success
+      - id: GT-SONAR-003
+        type: exposure
+        value: Source code scanner results publicly viewable — leaks internal code
+        severity: high
+        expected_skill: /source-audit
+        expected_chain: cicd_supply_chain
+        confirmation_method: response_body
+
+  gitea-secrets:
+    expected:
+      - id: GT-GITEA-001
+        type: secret
+        value: .env.production.bak committed to platform repo — MinIO credentials exposed
+        severity: critical
+        expected_skill: /supply-chain
+        expected_chain: cicd_supply_chain
+        confirmation_method: response_body
+        notes: "chain origin — GT-GITEA-001 → GT-VAULT-002 (repo secret → Vault root token)"
+      - id: GT-GITEA-002
+        type: misconfig
+        value: Weak webhook secret — allows forged push events to Jenkins
+        severity: high
+        expected_skill: /supply-chain
+        expected_chain: cicd_supply_chain
+        confirmation_method: exec_output
+        notes: "chain origin — GT-GITEA-002 → GT-JNK-001 (Gitea weak webhook → Jenkins job inject)"
+      - id: GT-GITEA-003
+        type: auth
+        value: Gitea admin account uses default password — full org access
+        severity: critical
+        expected_skill: /supply-chain
+        expected_chain: cicd_supply_chain
+        confirmation_method: auth_success
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # E. DATA STORES EXPUESTOS  (9 entries across 4 stacks)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  mongo-open:
+    expected:
+      - id: GT-MONGO-001
+        type: misconfig
+        value: MongoDB running without authentication — all databases accessible
+        severity: critical
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: response_body
+      - id: GT-MONGO-002
+        type: exposure
+        value: users collection contains plaintext passwords and PII (email, phone)
+        severity: critical
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: response_body
+      - id: GT-MONGO-003
+        type: injection
+        value: NoSQL injection via JSON body on /api/login — $where bypass
+        severity: high
+        expected_skill: /web-hunter
+        expected_chain: generic_web
+        confirmation_method: auth_success
+
+  redis-open:
+    expected:
+      - id: GT-REDIS-001
+        type: misconfig
+        value: Redis bound to 0.0.0.0 without AUTH — CONFIG and SLAVEOF reachable
+        severity: critical
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: response_body
+      - id: GT-REDIS-002
+        type: rce
+        value: Redis CONFIG SET dir + SLAVEOF chain enables RCE via cron/SSH key write
+        severity: critical
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: exec_output
+
+  elastic-open:
+    expected:
+      - id: GT-ELASTIC-001
+        type: misconfig
+        value: Elasticsearch cluster has no authentication and no TLS
+        severity: critical
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: response_body
+      - id: GT-ELASTIC-002
+        type: exposure
+        value: Index enum via /_cat/indices leaks all index names and doc counts
+        severity: high
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: response_body
+
+  postgres-open:
+    expected:
+      - id: GT-PG-001
+        type: misconfig
+        value: PostgreSQL trust authentication from any Docker subnet — no password needed
+        severity: critical
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: auth_success
+      - id: GT-PG-002
+        type: exposure
+        value: Canary row in public.employees table detects lateral access from leaked creds
+        severity: critical
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: db_write
+        notes: "multi-stack chain — requires GT-GITLAB-005 database.yml creds first"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # F. CLOUD-SIM  (10 entries across 4 stacks)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  localstack:
+    expected:
+      - id: GT-LS-001
+        type: misconfig
+        value: IAM wildcard policy (* on *) allows any action on any resource
+        severity: critical
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: bucket_list
+      - id: GT-LS-002
+        type: exposure
+        value: Public S3 bucket "public-assets" listable without credentials
+        severity: high
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: bucket_list
+      - id: GT-LS-003
+        type: lateral
+        value: Lambda function env vars contain DB_PASSWORD readable via GetFunctionConfiguration
+        severity: critical
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: response_body
+        notes: "chain origin — GT-LS-001 → GT-LS-003 (IAM abuse → lambda env var leak)"
+
+  minio-open:
+    expected:
+      - id: GT-MINIO-001
+        type: misconfig
+        value: finance-private bucket listable anonymously — no bucket policy
+        severity: high
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: bucket_list
+      - id: GT-MINIO-002
+        type: secret
+        value: payroll-2026.csv contains honeytoken — detection canary row
+        severity: critical
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: response_body
+      - id: GT-MINIO-003
+        type: lateral
+        value: MinIO access key leaked via jenkins-old stored cred — reaches finance-private
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: cicd_supply_chain
+        confirmation_method: bucket_list
+        notes: "multi-stack chain — requires GT-JNK-004 Jenkins stored cred first"
+
+  vault-dev-bad:
+    expected:
+      - id: GT-VAULT-001
+        type: misconfig
+        value: Vault running in dev mode — root token "root" static and unrevoked
+        severity: critical
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: auth_success
+      - id: GT-VAULT-002
+        type: secret
+        value: KV secret engine /secret/gitea exposes Gitea admin token and webhook key
+        severity: critical
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: response_body
+        notes: "chain origin — GT-VAULT-002 → GT-GITEA-001 (Vault root token → Gitea repo secret exfil)"
+
+  metadata-sim:
+    expected:
+      - id: GT-METADATA-001
+        type: ssrf
+        value: SSRF to IMDS sim at 169.254.169.254 returns short-lived AWS credentials
+        severity: critical
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: response_body
+        notes: "multi-stack chain — requires GT-SPRING-003 SSRF pivot first"
+      - id: GT-METADATA-002
+        type: exposure
+        value: /latest/user-data endpoint exposes bootstrap script with hardcoded secrets
+        severity: high
+        expected_skill: /cloud-audit
+        expected_chain: cloud_infrastructure
+        confirmation_method: response_body
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # G. AD / K8S  (5 entries across 2 stacks)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  ad-budget:
+    expected:
+      - id: GT-AD-001
+        type: misconfig
+        value: LDAP anonymous bind enabled — full directory enumeration without auth
+        severity: high
+        expected_skill: /pentest
+        expected_chain: active_directory
+        confirmation_method: response_body
+      - id: GT-AD-002
+        type: auth
+        value: SMB share "users" accessible with guest/null session — file listing
+        severity: high
+        expected_skill: /pentest
+        expected_chain: active_directory
+        confirmation_method: response_body
+      - id: GT-AD-003
+        type: misconfig
+        value: Weak password policy — min length 4, no complexity, no lockout
+        severity: medium
+        expected_skill: /pentest
+        expected_chain: active_directory
+        confirmation_method: auth_success
+
+  kube-goat:
+    expected:
+      - id: GT-K3S-001
+        type: privesc
+        value: RBAC ClusterRoleBinding gives default ServiceAccount cluster-admin rights
+        severity: critical
+        expected_skill: /container-audit
+        expected_chain: container_kubernetes
+        confirmation_method: exec_output
+        notes: "chain origin — GT-K3S-001 → GT-KUBEGOAT-003 (permissive RBAC → pod escape)"
+      - id: GT-KUBEGOAT-002
+        type: secret
+        value: Kubernetes Secret leaked in pod env via KUBERNETES_SERVICE_ACCOUNT_TOKEN
+        severity: high
+        expected_skill: /container-audit
+        expected_chain: container_kubernetes
+        confirmation_method: exec_output
+      - id: GT-KUBEGOAT-003
+        type: rce
+        value: Docker-in-Docker socket mounted in pod — container escape to host node
+        severity: critical
+        expected_skill: /container-audit
+        expected_chain: container_kubernetes
+        confirmation_method: exec_output
+        notes: "multi-stack chain — requires GT-K3S-001 permissive RBAC first"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # H. MAIL  (3 entries across 3 stacks)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  mail-weak:
+    expected:
+      - id: GT-MAIL-001
+        type: auth
+        value: Postfix open relay — accepts mail relay for external domains without auth
+        severity: high
+        expected_skill: /pentest
+        expected_chain: mail_server
+        confirmation_method: response_body
+
+  mailhog:
+    expected:
+      - id: GT-MAILHOG-001
+        type: exposure
+        value: MailHog web UI accessible without authentication — reads all captured mail
+        severity: medium
+        expected_skill: /pentest
+        expected_chain: mail_server
+        confirmation_method: status_code
+
+  exchange-mock:
+    expected:
+      - id: GT-EXCHANGE-001
+        type: misconfig
+        value: Exchange EWS (Exchange Web Services) accepts NTLM without Kerberos fallback
+        severity: high
+        expected_skill: /identity-attacks
+        expected_chain: exchange
+        confirmation_method: auth_success
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # I. IoT / AI / MOBILE / WIRELESS / VoIP / SCADA  (6 entries across 7 stacks)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  iotgoat:
+    expected:
+      - id: GT-IOT-001
+        type: auth
+        value: Telnet service accessible with hardcoded admin:admin credentials
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: iot_embedded
+        confirmation_method: auth_success
+
+  promptme:
+    expected:
+      - id: GT-PROMPTME-001
+        type: ai
+        value: Prompt injection via user input bypasses system prompt guardrails (LLM01)
+        severity: high
+        expected_skill: /web-hunter
+        expected_chain: ai_ml_attacks
+        confirmation_method: response_body
+
+  dvaia:
+    expected:
+      - id: GT-DVAIA-001
+        type: ai
+        value: Insecure output handling — LLM response triggers eval() in frontend (LLM02)
+        severity: critical
+        expected_skill: /web-hunter
+        expected_chain: ai_ml_attacks
+        confirmation_method: exec_output
+
+  mobile-backend:
+    expected:
+      - id: GT-MOBILE-001
+        type: auth
+        value: Mobile API accepts expired JWT — signature expiry not validated server-side
+        severity: high
+        expected_skill: /api-audit
+        expected_chain: mobile_pentest
+        confirmation_method: auth_success
+
+  wireless-sim:
+    expected:
+      - id: GT-WIRELESS-001
+        type: misconfig
+        value: WPA2-Personal PSK "password123" brute-forceable via pmkid capture
+        severity: high
+        expected_skill: /pentest
+        expected_chain: wireless_pentest
+        confirmation_method: auth_success
+
+  asterisk-weak:
+    expected:
+      - id: GT-VOIP-001
+        type: auth
+        value: SIP extension 1000 accessible with default password — call hijack possible
+        severity: high
+        expected_skill: /pentest
+        expected_chain: voip_scada
+        confirmation_method: auth_success
+
+  openplc-hmi:
+    expected:
+      - id: GT-SCADA-001
+        type: auth
+        value: OpenPLC HMI default credentials (openplc:openplc) — full PLC control access
+        severity: critical
+        expected_skill: /pentest
+        expected_chain: voip_scada
+        confirmation_method: auth_success
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # SAAS EXPLOITATION target (needed for GT-SAML-001 cross-stack chain)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  saas-exploitation-mock:
+    expected:
+      - id: GT-SAAS-001
+        type: lateral
+        value: Unsigned SAML assertion accepted — attacker pivots to adjacent tenant
+        severity: critical
+        expected_skill: /identity-attacks
+        expected_chain: saas_exploitation
+        confirmation_method: auth_success
+        notes: "multi-stack chain — requires GT-SAML-001 unsigned assertion first"
