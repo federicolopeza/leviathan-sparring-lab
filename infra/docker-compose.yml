@@ -242,7 +242,6 @@ services:
     networks:
       - services_net
       - data_net
-      - data_net
     security_opt:
       - no-new-privileges:true
 
