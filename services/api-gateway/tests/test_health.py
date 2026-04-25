@@ -36,6 +36,12 @@ async def test_health_ready_includes_upstream_status(
     respx_mock.get("http://webhooks-service:8000/v1/health/live").mock(
         return_value=httpx.Response(200, json={"status": "ok"})
     )
+    respx_mock.get("http://agents-service:8000/v1/health/live").mock(
+        return_value=httpx.Response(200, json={"status": "ok"})
+    )
+    respx_mock.get("http://llm-service:8000/v1/health/live").mock(
+        return_value=httpx.Response(200, json={"status": "ok"})
+    )
 
     response = await client.get("/v1/health/ready")
 
@@ -49,3 +55,9 @@ async def test_health_ready_includes_upstream_status(
     assert body["upstreams"]["uploads"] == "ok"
     assert body["upstreams"]["search"] == "ok"
     assert body["upstreams"]["webhooks"] == "ok"
+    assert "billing" in body["upstreams"]
+    assert "uploads" in body["upstreams"]
+    assert "search" in body["upstreams"]
+    assert "webhooks" in body["upstreams"]
+    assert "agents" in body["upstreams"]
+    assert "llm" in body["upstreams"]

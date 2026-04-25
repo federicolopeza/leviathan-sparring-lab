@@ -57,6 +57,18 @@ def build_upstream_registry(settings: Settings) -> dict[str, Upstream]:
             requires_jwt=True,
             prefixes=("/v1/webhooks/",),
         ),
+        "agents": Upstream(
+            name="agents",
+            base_url=settings.agents_service_url,
+            requires_jwt=True,
+            prefixes=("/v1/agents/",),
+        ),
+        "llm": Upstream(
+            name="llm",
+            base_url=settings.llm_service_url,
+            requires_jwt=True,
+            prefixes=("/v1/llm/",),
+        ),
     }
 
 

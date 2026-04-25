@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     uploads_service_url: str = Field(default="http://uploads-service:8000", alias="UPLOADS_SERVICE_URL")
     search_service_url: str = Field(default="http://search-service:8000", alias="SEARCH_SERVICE_URL")
     webhooks_service_url: str = Field(default="http://webhooks-service:8000", alias="WEBHOOKS_SERVICE_URL")
+    agents_service_url: str = Field(default="http://agents-service:8000", alias="AGENTS_SERVICE_URL")
+    llm_service_url: str = Field(default="http://llm-service:8000", alias="LLM_SERVICE_URL")
 
     jwt_public_key_pem: str = Field(default="", alias="JWT_PUBLIC_KEY_PEM")
     database_url_audit: str = Field(

@@ -70,9 +70,9 @@ Baked values: `baked-v3.0.0` (committed) | `baked-deferred` (pending phase) | `n
 
 | ID | Title | Service | File:Line | CVSS | Chain | Status |
 |---|---|---|---|---|---|---|
-| V-T5-001 | HMAC == compare on webhook signature (not compare_digest) | webhooks-service | TBD Phase 3 | 5.9 | → V-T8-004 chain | baked-deferred |
-| V-T5-002 | JWT alg confusion: RS256 → HS256 with pubkey as secret | shared | `melispy_shared/auth.py:verify_jwt_unsafe_alg_confusion:59` | 9.1 | → forge any RS256 token | baked-v3.0.0 |
-| V-T5-003 | JWT kid header path traversal (loads key from filesystem) | shared | `melispy_shared/auth.py:verify_jwt_kid_path:68` | 9.1 | → sign as any user | baked-v3.0.0 |
+| V-T5-001 | IDOR on agent run | agents-service | `services/agents-service/app/routes/runs.py` (GET `/{run_id}`) | 5.9 | → V-T8-004 chain | baked-v3.0.0 |
+| V-T5-002 | JWT alg confusion | llm-service | `services/llm-service/app/routes/verify.py` (POST `/verify-token`) | 9.1 | → forge any RS256 token | baked-v3.0.0 |
+| V-T5-003 | JWT kid path traversal | llm-service | `services/llm-service/app/routes/verify.py` (POST `/verify-kid`) | 9.1 | → sign as any user | baked-v3.0.0 |
 | V-T5-004 | API key generation uses random.random() (16-bit entropy) | api-gateway | TBD Phase 3 | 7.5 | → key brute-force | baked-deferred |
 | V-T5-005 | AES-CBC with predictable IV (timestamp) for payment metadata | billing-service | TBD Phase 3 | 7.5 | → decrypt payment data | baked-deferred |
 | V-T5-006 | Single internal mTLS cert shared across all services | infra | TBD Phase 5 | 8.1 | → lateral pivot post-compromise | baked-deferred |
@@ -83,9 +83,9 @@ Baked values: `baked-v3.0.0` (committed) | `baked-deferred` (pending phase) | `n
 
 | ID | Title | Service | File:Line | CVSS | Chain | Status |
 |---|---|---|---|---|---|---|
-| V-T6-001 | SSTI → Jinja2 sandbox escape → RCE | users-service | TBD Phase 3 | 9.8 | V-T4-009 → OS exec | baked-deferred |
-| V-T6-002 | Pickle deserialization via Redis SET | cache layer | TBD Phase 3 | 9.8 | → RCE + V-T8-006 | baked-deferred |
-| V-T6-003 | Tool RCE post-auth in agents-service (exec_shell callable) | agents-service | TBD Phase 3 | 9.8 | → OS command execution | baked-deferred |
+| V-T6-001 | SSTI via Jinja2 | agents-service | `services/agents-service/app/routes/runs.py` (POST `/{run_id}/render`) | 9.8 | V-T4-009 → OS exec | baked-v3.0.0 |
+| V-T6-002 | Prompt injection | llm-service | `services/llm-service/app/routes/conversations.py` | 9.8 | → RCE + V-T8-006 | baked-v3.0.0 |
+| V-T6-003 | Conversation IDOR | llm-service | `services/llm-service/app/routes/conversations.py` | 9.8 | → OS command execution | baked-v3.0.0 |
 | V-T6-004 | LLM prompt injection via uploaded PDF (RAG context) | agents-service | TBD Phase 3 | 8.1 | → exfil via agent | baked-deferred |
 | V-T6-005 | LLM streaming SSE token delay leaks secret length | llm-service | TBD Phase 3 | 4.3 | → side-channel info | baked-deferred |
 | V-T6-006 | ImageMagick SVG injection → RCE | uploads-service | TBD Phase 3 | 9.8 | → OS exec | baked-deferred |

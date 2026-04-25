@@ -352,6 +352,41 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  agents-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/agents-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:@postgres:5432/melispy_agents"
+      JWT_PUBLIC_KEY_PEM:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  llm-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/llm-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:@postgres:5432/melispy_llm"
+      JWT_PUBLIC_KEY_PEM:
+      LLM_MOCK_MODE: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
   # ─── Honeypot (preserved v2) ────────────────────────────────────────────────
 
   honeypot-service:
