@@ -116,6 +116,34 @@ export const WebhookDeliverySchema = z.object({
   last_attempted_at: z.string()
 });
 
+// SYNC: services/agents-service
+export const AgentRunSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  status: z.enum(["queued", "running", "completed", "failed", "cancelled"]),
+  input_json: z.record(z.unknown()),
+  output_json: z.record(z.unknown()).nullable(),
+  created_at: z.string()
+});
+export type AgentRun = z.infer<typeof AgentRunSchema>;
+
+// SYNC: services/llm-service
+export const ConversationSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  model: z.string(),
+  created_at: z.string()
+});
+export type Conversation = z.infer<typeof ConversationSchema>;
+
+export const MessageSchema = z.object({
+  id: z.string().uuid(),
+  role: z.enum(["user", "assistant", "system"]),
+  content: z.string(),
+  created_at: z.string()
+});
+export type Message = z.infer<typeof MessageSchema>;
+
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type SignupInput = z.infer<typeof SignupSchema>;
 export type User = z.infer<typeof UserSchema>;

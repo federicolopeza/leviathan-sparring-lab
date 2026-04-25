@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Bot, Building2, CreditCard, KeyRound, Menu, UploadCloud, Webhook, X } from "lucide-react";
+import { BarChart3, Bot, Building2, CreditCard, KeyRound, Menu, MessageSquare, UploadCloud, Webhook, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
-  { href: "/dashboard/agents", label: "Agentes", icon: Bot },
+  { href: "/agents", label: "Agents", icon: Bot },
+  { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
   { href: "/dashboard/uploads", label: "Uploads", icon: UploadCloud },
   { href: "/dashboard/webhooks", label: "Webhooks", icon: Webhook },
