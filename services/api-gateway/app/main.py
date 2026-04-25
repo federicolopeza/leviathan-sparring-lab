@@ -11,6 +11,7 @@ from app.config import Settings
 from app.deps.db import create_audit_sessionmaker
 from app.middleware.audit import AuditMiddleware
 from app.middleware.jwt_introspect import JWTIntrospectMiddleware
+from app.middleware.opa_authz import OPAAuthzMiddleware
 from app.middleware.tier_rate_limit import TierRateLimitMiddleware
 from app.routes.health import router as health_router
 from app.routes.proxy import router as proxy_router
@@ -38,6 +39,7 @@ def create_app(
     app.include_router(proxy_router)
 
     app.add_middleware(AuditMiddleware, sessionmaker=audit_sessions)
+    app.add_middleware(OPAAuthzMiddleware, settings=resolved_settings)
     app.add_middleware(TierRateLimitMiddleware, settings=resolved_settings, redis_client=redis)
     app.add_middleware(JWTIntrospectMiddleware, settings=resolved_settings)
     app.add_middleware(RequestIdMiddleware)

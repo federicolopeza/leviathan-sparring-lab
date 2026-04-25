@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     tier_rate_limit_pro: int = Field(default=600, alias="TIER_RATE_LIMIT_PRO")
     tier_rate_limit_enterprise: int = Field(default=6000, alias="TIER_RATE_LIMIT_ENTERPRISE")
 
+    opa_url: str = Field(default="http://opa:8181", alias="OPA_URL")
+    opa_required: bool = Field(default=False, alias="OPA_REQUIRED")
+
     def tier_limits(self) -> dict[str, int]:
         return {
             "free": self.tier_rate_limit_free,
