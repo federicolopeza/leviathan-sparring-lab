@@ -2,56 +2,62 @@
 
 **Last updated:** 2026-04-25
 **Branch:** worktree-v3-melispy-baseline
-**Active session goal:** Phase 2 — Business services + T3-T4 vulns
+**Active session goal:** Phase 5 — Defense escalation + observability v3
 
 ---
 
-## Current phase: Phase 2 (in_progress)
+## Current phase: Phase 5 (NEXT — Phase 4 complete)
 
-### Commits
-- `fa65c5e` Phase 0 — foundation (frontend skeleton, auth-service, data tier)
-- `668f95a` Phase 1 — core microservices + T1-T2 vulns
-- Phase 2 in progress (not yet committed)
+### Commits (latest first)
 
-### Phase 2 T3/T4 vulns baked (ready to commit)
-
-| ID | File | Status |
-|---|---|---|
-| V-T3-001 BOLA | `orgs-service/app/routes/orgs.py:69`, `members.py:43` | ✅ baked |
-| V-T3-002 IDOR | `users-service/app/routes/users.py:88` | ✅ baked |
-| V-T3-003 mass-assign | `users-service/app/schemas/users.py:13`, `routes/users.py:66` | ✅ baked |
-| V-T3-006 weak token | `orgs-service/app/routes/invitations.py:109` | ✅ baked |
-| V-T4-003 SSRF avatar | `users-service/app/routes/users.py:124` | ✅ baked |
-| V-T4-007 stored XSS | `users-service/app/routes/users.py:70` | ✅ baked |
-
-### Phase 2 service scaffolds (Codex agents building in parallel)
-
-| Service | Status | Vulns to bake |
-|---|---|---|
-| billing-service | Codex agent running (a8c5fc8d) | V-T4-001 race, V-T4-002 coupon, V-T4-011 negative qty |
-| uploads-service | Codex agent running (a69b379d) | V-T4-005 traversal, V-T4-006 polyglot |
-| search-service | Codex agent running (a5d3d31c) | V-T4-008 SQLi |
-| webhooks-service | Codex agent running (a2cf34cc) | V-T4-004 SSRF, V-T4-010 replay |
-| frontend (billing/uploads/webhooks pages) | Codex agent running (af6bd0a1) | — |
-
-### Infrastructure updates (ready to commit)
-
-- `infra/docker-compose.yml` — 8 new microservice blocks (api-gateway through webhooks-service)
-- `services/api-gateway/app/config.py` — 4 new service URL fields
-- `services/api-gateway/app/upstreams.py` — 4 new upstreams (billing/uploads/search/webhooks)
-- `frontend/lib/schemas.ts` — Zod schemas for billing/uploads/webhooks (added by T3-T4 baker)
-- `VULN-CATALOG.md` — T3/T4 rows updated to baked-v3.0.0 with file:line refs
+- `feat(v3-phase4)` — lateral + elite chains + T7-T8 vulns (JUST COMMITTED)
+- `2f33b01` fix(search-service): correct V-T4-008 SQLi reproducer payload
+- `a097b45` feat(v3-phase3): llm-service + V-T5-002/003 JWT vulns + V-T6-002/003
+- `a79a489` feat(v3-phase3): agents-service + V-T5-001 IDOR + V-T6-001 SSTI
+- `278af2c` feat(v3-phase2): business services + T3-T4 vulns baked
+- `668f95a` feat(v3-phase1): core microservices + T1-T2 vulns
+- `fa65c5e` feat(v3-phase0): foundation
 
 ---
 
-## What to do when Codex agents complete
+## Phase 4 — COMPLETE (52 vulns baked)
 
-When the 5 Codex agents notify completion, integrate their work:
+### What was built
 
-1. Check each new service has: `main.py`, routes, schemas, alembic migration, Dockerfile, pyproject.toml, tests
-2. Verify V-T4-001/002/004/005/006/008/010/011 annotations are in place
-3. Commit Phase 2 as one atomic commit: `feat(v3-phase2): business services + T3-T4 vulns`
-4. Then dispatch Phase 3 agents: agents-service, llm-service, chat widget, T5-T6 vulns
+| Service | Key vulns | Tests |
+|---|---|---|
+| admin-service | V-T3-004 (X-Cluster-Internal bypass), V-T4-007 (XSS in bio), V-T4-009 (SSTI Jinja2), V-T7-002 (Vault token in env) | 8 passed |
+| notifications-service | V-T7-005 (MinIO root creds), V-T6-006 (ImageMagick SVG), V-T6-007 (wkhtmltopdf cmd injection) | 7 passed |
+| cloud-metadata-sim | V-T8-001 (IMDSv1 unauthenticated, fake STS creds) | 7 passed |
+| infra/docker-compose.yml | V-T7-006 (docker.sock in promtail), admin+notifications+cloud-metadata-sim added | — |
+| engagements/_baseline-exploits/ | V-T8-001, V-T8-005, V-T8-006 chain scripts | — |
+| infra/ca/ROADMAP.md | V-T7-001 single-CA design documentation | — |
+| VULN-CATALOG.md | All 52 vulns updated (T4-T8 deferred → baked-v3.0.0) | — |
+
+---
+
+## Phase 5 plan (NEXT)
+
+Dispatch 6 parallel agents:
+
+```
+Agent 1 — opa-policies (Codex)         # infra/opa/policies/*.rego
+Agent 2 — postgres-rls (Codex)         # infra/postgres/init/rls.sql + app deps
+Agent 3 — mtls-mesh (fork)             # infra/ca/ real certs + traefik tls dynamic config
+Agent 4 — audit-signing (Codex)        # melispy_shared/audit.py verify_chain used in admin-service
+Agent 5 — grafana-dashboards (fork)    # infra/grafana/dashboards/*.json (4 dashboards)
+Agent 6 — loki-alerts (Codex)          # infra/loki/ruler/*.yaml + Discord webhook
+```
+
+Acceptance:
+- OPA evaluates every api-gateway request; logs allow/deny
+- RLS on Postgres prevents cross-tenant query even with shared creds
+- mTLS verified between every internal service pair (Traefik TLS client-auth)
+- Audit log entries verifiable via HMAC chain
+- Grafana dashboards: rate-limits, auth-failures, search-queries, SSRF-attempts
+- Loki alert fires on SQL injection pattern → Discord webhook test
+
+Commit: `feat(v3-phase5): defense escalation + observability v3`
 
 ---
 
@@ -59,26 +65,14 @@ When the 5 Codex agents notify completion, integrate their work:
 
 - [x] Phase 0 — Foundation
 - [x] Phase 1 — Core microservices + T1-T2 vulns
-- [ ] **Phase 2** — Business services + T3-T4 vulns (IN PROGRESS)
-- [ ] Phase 3 — AI integration + T5-T6 vulns
-- [ ] Phase 4 — Lateral + Elite + T7-T8 vulns
-- [ ] Phase 5 — Defense escalation + observability v3
+- [x] Phase 2 — Business services + T3-T4 vulns
+- [x] Phase 3 — AI integration + T5-T6 vulns
+- [x] **Phase 4** — Lateral + Elite + T7-T8 vulns (COMPLETE)
+- [ ] **Phase 5** — Defense escalation + observability v3 (NEXT)
 - [ ] Phase 6 — Loop tooling + legacy cleanup + release v3.0.0
 - [ ] Phase 7 — First adversarial run + iteration
 
 ---
-
-## Quality gates before Phase 2 commit
-
-```bash
-cd services/users-service && python -m pytest -x -q
-cd services/orgs-service && python -m pytest -x -q
-cd services/api-gateway && python -m pytest -x -q
-cd services/billing-service && python -m pytest -x -q 2>/dev/null || echo "tests pending"
-cd services/uploads-service && python -m pytest -x -q 2>/dev/null || echo "tests pending"
-cd services/search-service && python -m pytest -x -q 2>/dev/null || echo "tests pending"
-cd services/webhooks-service && python -m pytest -x -q 2>/dev/null || echo "tests pending"
-```
 
 ## Useful commands
 
@@ -86,4 +80,7 @@ cd services/webhooks-service && python -m pytest -x -q 2>/dev/null || echo "test
 git log --oneline -10
 git diff HEAD --stat
 git status --short
+cd services/admin-service && python -m pytest -x -q
+cd services/notifications-service && python -m pytest -x -q
+cd services/cloud-metadata-sim && python -m pytest -x -q
 ```

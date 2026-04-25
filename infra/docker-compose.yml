@@ -152,6 +152,8 @@ services:
       - /var/log:/var/log:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - ./loki/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      # V-T7-006 INTENTIONAL VULN: docker.sock mounted readonly — post-compromise exec into any container
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - observe_net
     security_opt:
@@ -384,6 +386,80 @@ services:
     networks:
       - services_net
       - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── Phase 4 services ──────────────────────────────────────────────────────
+
+  admin-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/admin-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${POSTGRES_PASSWORD}@postgres:5432/melispy_admin"
+      DATABASE_URL_AUTH: "postgresql+asyncpg://melispy_app:${POSTGRES_PASSWORD}@postgres:5432/melispy_auth"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+      AUDIT_LOG_HMAC_KEY: ${AUDIT_LOG_HMAC_KEY}
+      BUILD_HASH: ${BUILD_HASH:-dev}
+      # V-T7-002 INTENTIONAL VULN: Vault root token injected into app env — readable via /proc/1/environ post-RCE
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN_ID:-dev-root-token}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin.rule=Host(`admin.melispy.com`)"
+      - "traefik.http.routers.admin.entrypoints=websecure"
+      - "traefik.http.routers.admin.middlewares=security-headers@file,ratelimit-default@file"
+      - "traefik.http.services.admin.loadbalancer.server.port=8080"
+    security_opt:
+      - no-new-privileges:true
+
+  notifications-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/notifications-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${POSTGRES_PASSWORD}@postgres:5432/melispy_notifications"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+      AUDIT_LOG_HMAC_KEY: ${AUDIT_LOG_HMAC_KEY}
+      BUILD_HASH: ${BUILD_HASH:-dev}
+      # V-T7-005 INTENTIONAL VULN: MinIO root (admin-tier) creds in service env — not a scoped service account
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ENDPOINT: "http://minio:9000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.notifications.rule=Host(`notifications.melispy.com`)"
+      - "traefik.http.routers.notifications.entrypoints=websecure"
+      - "traefik.http.services.notifications.loadbalancer.server.port=8080"
+    security_opt:
+      - no-new-privileges:true
+
+  # V-T8-001 target: SSRF via avatar_url → this endpoint → fake STS creds
+  cloud-metadata-sim:
+    <<: *svc-defaults
+    build:
+      context: ../services/cloud-metadata-sim
+      dockerfile: Dockerfile
+    networks:
+      - services_net
+      - data_net
+    # Bind to 169.254.169.254 on the internal network (requires host networking or macvlan in prod;
+    # in compose: alias used by upstream services to reach the sim)
+    labels:
+      - "traefik.enable=false"
     security_opt:
       - no-new-privileges:true
 

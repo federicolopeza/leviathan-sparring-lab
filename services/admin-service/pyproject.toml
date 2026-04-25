@@ -1,0 +1,57 @@
+[project]
+name = "melispy-admin-service"
+version = "0.1.0"
+description = "Melispy v3 admin service."
+readme = "README.md"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "alembic",
+    "asyncpg",
+    "fastapi",
+    "jinja2",
+    "melispy-shared",
+    "pydantic-settings",
+    "redis",
+    "sqlalchemy[asyncio]",
+    "structlog",
+    "uvicorn[standard]",
+]
+
+[dependency-groups]
+dev = [
+    "aiosqlite",
+    "httpx",
+    "mypy",
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+melispy-shared = { path = "../_shared", editable = true }
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "S"]
+ignore = ["E501", "S101", "S105", "S106", "S701"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+plugins = ["pydantic.mypy", "sqlalchemy.ext.mypy.plugin"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

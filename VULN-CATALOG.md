@@ -52,17 +52,17 @@ Baked values: `baked-v3.0.0` (committed) | `baked-deferred` (pending phase) | `n
 
 | ID | Title | Service | File:Line | CVSS | Chain | Status |
 |---|---|---|---|---|---|---|
-| V-T4-001 | Race condition on /billing/checkout — double charge | billing-service | TBD Phase 2 | 7.5 | → financial fraud | baked-deferred |
-| V-T4-002 | Coupon code stacking — same code N times | billing-service | TBD Phase 2 | 6.5 | → price manipulation | baked-deferred |
+| V-T4-001 | Race condition on /billing/checkout — double charge | billing-service | `services/billing-service/app/routes/billing.py` | 7.5 | → financial fraud | baked-v3.0.0 |
+| V-T4-002 | Coupon code stacking — same code N times | billing-service | `services/billing-service/app/routes/coupons.py` | 6.5 | → price manipulation | baked-v3.0.0 |
 | V-T4-003 | SSRF via avatar image_url fetch (no IP allowlist) | users-service | `app/routes/users.py:124` | 8.6 | → V-T8-001 metadata chain | baked-v3.0.0 |
-| V-T4-004 | SSRF via webhook URL (misses 169.254/IPv6) | webhooks-service | TBD Phase 2 | 8.6 | → V-T8-001 chain | baked-deferred |
-| V-T4-005 | Path traversal in GET /uploads/{filename} | uploads-service | TBD Phase 2 | 7.5 | → read arbitrary files | baked-deferred |
-| V-T4-006 | Polyglot JPEG/PNG upload bypasses magic-byte check | uploads-service | TBD Phase 2 | 7.5 | → stored payload | baked-deferred |
-| V-T4-007 | Stored XSS in user bio (admin log viewer renders raw) | users-service | `app/routes/users.py:70` | 6.1 | → V-T8-005 admin takeover | baked-v3.0.0 |
-| V-T4-008 | SQL injection in /search?q= (raw LIKE concat) | search-service | TBD Phase 2 | 9.8 | → DB read/write | baked-deferred |
-| V-T4-009 | SSTI in dashboard branding (Jinja2 autoescape=False) | users-service | TBD Phase 2 | 9.8 | → V-T6-001 RCE | baked-deferred |
-| V-T4-010 | Webhook retry queue not idempotent | webhooks-service | TBD Phase 2 | 5.3 | → replay attack | baked-deferred |
-| V-T4-011 | Negative quantity accepted in checkout | billing-service | TBD Phase 2 | 6.5 | → refund abuse | baked-deferred |
+| V-T4-004 | SSRF via webhook URL (misses 169.254/IPv6) | webhooks-service | `services/webhooks-service/app/routes/webhooks.py` | 8.6 | → V-T8-001 chain | baked-v3.0.0 |
+| V-T4-005 | Path traversal in GET /uploads/{filename} | uploads-service | `services/uploads-service/app/routes/uploads.py` | 7.5 | → read arbitrary files | baked-v3.0.0 |
+| V-T4-006 | Polyglot JPEG/PNG upload bypasses magic-byte check | uploads-service | `services/uploads-service/app/routes/uploads.py` | 7.5 | → stored payload | baked-v3.0.0 |
+| V-T4-007 | Stored XSS in user bio (admin log viewer renders raw) | users-service + admin-service | `services/admin-service/app/routes/admin.py:74` | 6.1 | → V-T8-005 admin takeover | baked-v3.0.0 |
+| V-T4-008 | SQL injection in saved search run (raw LIKE concat) | search-service | `services/search-service/app/routers/search.py:138` | 9.8 | → DB read cross-tenant | baked-v3.0.0 |
+| V-T4-009 | SSTI in admin branding (Jinja2 autoescape=False) | admin-service | `services/admin-service/app/routes/admin.py:270` | 9.8 | → V-T6-001 RCE | baked-v3.0.0 |
+| V-T4-010 | Webhook retry queue not idempotent | webhooks-service | `services/webhooks-service/app/routes/webhooks.py` | 5.3 | → replay attack | baked-v3.0.0 |
+| V-T4-011 | Negative quantity accepted in checkout | billing-service | `services/billing-service/app/routes/billing.py` | 6.5 | → refund abuse | baked-v3.0.0 |
 
 ---
 
@@ -73,9 +73,9 @@ Baked values: `baked-v3.0.0` (committed) | `baked-deferred` (pending phase) | `n
 | V-T5-001 | IDOR on agent run | agents-service | `services/agents-service/app/routes/runs.py` (GET `/{run_id}`) | 5.9 | → V-T8-004 chain | baked-v3.0.0 |
 | V-T5-002 | JWT alg confusion | llm-service | `services/llm-service/app/routes/verify.py` (POST `/verify-token`) | 9.1 | → forge any RS256 token | baked-v3.0.0 |
 | V-T5-003 | JWT kid path traversal | llm-service | `services/llm-service/app/routes/verify.py` (POST `/verify-kid`) | 9.1 | → sign as any user | baked-v3.0.0 |
-| V-T5-004 | API key generation uses random.random() (16-bit entropy) | api-gateway | TBD Phase 3 | 7.5 | → key brute-force | baked-deferred |
-| V-T5-005 | AES-CBC with predictable IV (timestamp) for payment metadata | billing-service | TBD Phase 3 | 7.5 | → decrypt payment data | baked-deferred |
-| V-T5-006 | Single internal mTLS cert shared across all services | infra | TBD Phase 5 | 8.1 | → lateral pivot post-compromise | baked-deferred |
+| V-T5-004 | API key generation uses random.random() (16-bit entropy) | api-gateway | `services/api-gateway/app/routes/proxy.py` | 7.5 | → key brute-force | baked-v3.0.0 |
+| V-T5-005 | AES-CBC with predictable IV (timestamp) for payment metadata | billing-service | `services/billing-service/app/routes/billing.py` | 7.5 | → decrypt payment data | baked-v3.0.0 |
+| V-T5-006 | Single internal mTLS cert shared across all services | infra | `infra/ca/` (Phase 5) | 8.1 | → lateral pivot post-compromise | baked-deferred |
 
 ---
 
@@ -86,10 +86,10 @@ Baked values: `baked-v3.0.0` (committed) | `baked-deferred` (pending phase) | `n
 | V-T6-001 | SSTI via Jinja2 | agents-service | `services/agents-service/app/routes/runs.py` (POST `/{run_id}/render`) | 9.8 | V-T4-009 → OS exec | baked-v3.0.0 |
 | V-T6-002 | Prompt injection | llm-service | `services/llm-service/app/routes/conversations.py` | 9.8 | → RCE + V-T8-006 | baked-v3.0.0 |
 | V-T6-003 | Conversation IDOR | llm-service | `services/llm-service/app/routes/conversations.py` | 9.8 | → OS command execution | baked-v3.0.0 |
-| V-T6-004 | LLM prompt injection via uploaded PDF (RAG context) | agents-service | TBD Phase 3 | 8.1 | → exfil via agent | baked-deferred |
-| V-T6-005 | LLM streaming SSE token delay leaks secret length | llm-service | TBD Phase 3 | 4.3 | → side-channel info | baked-deferred |
-| V-T6-006 | ImageMagick SVG injection → RCE | uploads-service | TBD Phase 3 | 9.8 | → OS exec | baked-deferred |
-| V-T6-007 | OS command injection in wkhtmltopdf PDF export | billing-service | TBD Phase 3 | 9.8 | → OS exec | baked-deferred |
+| V-T6-004 | LLM prompt injection via uploaded PDF (RAG context) | agents-service | `services/agents-service/app/routes/runs.py` | 8.1 | → exfil via agent | baked-v3.0.0 |
+| V-T6-005 | LLM streaming SSE token delay leaks secret length | llm-service | `services/llm-service/app/routes/conversations.py` | 4.3 | → side-channel info | baked-v3.0.0 |
+| V-T6-006 | ImageMagick SVG injection → RCE | notifications-service | `services/notifications-service/app/routes/notifications.py:134` | 9.8 | → OS exec | baked-v3.0.0 |
+| V-T6-007 | OS command injection in wkhtmltopdf PDF export | notifications-service | `services/notifications-service/app/routes/notifications.py:115` | 9.8 | → OS exec | baked-v3.0.0 |
 
 ---
 
@@ -97,12 +97,12 @@ Baked values: `baked-v3.0.0` (committed) | `baked-deferred` (pending phase) | `n
 
 | ID | Title | Service | File:Line | CVSS | Chain | Status |
 |---|---|---|---|---|---|---|
-| V-T7-001 | Internal mTLS cert reusable across all services | infra | TBD Phase 4 | 8.1 | → any-service impersonation | baked-deferred |
-| V-T7-002 | Vault token in service env vars (post-RCE readable) | infra | TBD Phase 4 | 9.8 | → secrets exfil | baked-deferred |
+| V-T7-001 | Internal mTLS cert reusable across all services | infra | `infra/ca/ROADMAP.md` (single-CA design) | 8.1 | → any-service impersonation | baked-deferred |
+| V-T7-002 | Vault token in service env vars (post-RCE readable) | admin-service | `services/admin-service/app/config.py:19` + `infra/docker-compose.yml` | 9.8 | → Vault secrets exfil → V-T8-006 | baked-v3.0.0 |
 | V-T7-003 | Shared melispy_app Postgres role across all services | infra | `infra/postgres/init/03-grants.sql:1` | 9.8 | → cross-service DB access | baked-v3.0.0 |
-| V-T7-004 | Redis no-auth on internal subnet | infra | `infra/docker-compose.yml:redis` comment | 8.8 | → V-T6-002 pickle chain | baked-v3.0.0 |
-| V-T7-005 | MinIO admin creds in notifications-service env | notifications | TBD Phase 4 | 8.1 | → object storage access | baked-deferred |
-| V-T7-006 | docker.sock mounted readonly in observability container | infra | TBD Phase 4 | 9.8 | → container escape | baked-deferred |
+| V-T7-004 | Redis no-auth on internal subnet | infra | `infra/docker-compose.yml:redis` | 8.8 | → V-T6-002 pickle chain | baked-v3.0.0 |
+| V-T7-005 | MinIO root creds in notifications-service env | notifications-service | `services/notifications-service/app/config.py:25-26` | 8.1 | → full object storage access | baked-v3.0.0 |
+| V-T7-006 | docker.sock mounted readonly in promtail container | infra | `infra/docker-compose.yml:promtail.volumes` | 9.8 | → docker exec any container → escape | baked-v3.0.0 |
 
 ---
 
@@ -110,13 +110,36 @@ Baked values: `baked-v3.0.0` (committed) | `baked-deferred` (pending phase) | `n
 
 | ID | Title | Services | CVSS | Chain | Status |
 |---|---|---|---|---|---|
-| V-T8-001 | SSRF → 169.254.169.254 metadata sim → STS token → cross-service auth | uploads + vault | 9.8 | V-T4-003/004 → V-T7-002 | baked-deferred |
-| V-T8-002 | Subdomain takeover + wide cookie domain → session theft | CF + auth | 9.1 | V-T3-005 + expired CNAME | baked-deferred |
-| V-T8-003 | LLM context blending → cross-tenant data exfil | agents + llm | 8.1 | V-T6-004 → tenant escape | baked-deferred |
-| V-T8-004 | Race condition + HMAC timing attack on webhook delivery | billing + webhooks | 7.5 | V-T4-001 + V-T5-001 | baked-deferred |
-| V-T8-005 | OAuth open-redirect + stored XSS + admin reflective → admin session | auth + users + admin | 9.8 | V-T2-003 + V-T4-007 | baked-deferred |
-| V-T8-006 | Pickle Redis → RCE → Vault token → cross-service exfil | cache + vault | 9.8 | V-T6-002 + V-T7-002 | baked-deferred |
+| V-T8-001 | SSRF → 169.254.169.254 metadata sim → STS token → cross-service auth | users-service + cloud-metadata-sim + vault | 9.8 | V-T4-003 → cloud-metadata-sim → V-T7-002 | baked-v3.0.0 |
+| V-T8-002 | Subdomain takeover + wide cookie domain → session theft | CF + auth-service | 9.1 | V-T3-005 + expired CNAME → session fixation | baked-v3.0.0 |
+| V-T8-003 | LLM context blending → cross-tenant data exfil | agents-service + llm-service | 8.1 | V-T6-004 → tenant escape via shared context window | baked-v3.0.0 |
+| V-T8-004 | Race condition + HMAC timing attack on webhook delivery | billing-service + webhooks-service | 7.5 | V-T4-001 + V-T5-001 → double-charge + timing oracle | baked-v3.0.0 |
+| V-T8-005 | OAuth open-redirect + stored XSS + admin panel → admin session theft | auth-service + users-service + admin-service | 9.8 | V-T2-003 → V-T4-007 → V-T4-009 admin takeover | baked-v3.0.0 |
+| V-T8-006 | Pickle Redis → RCE → Vault token → cross-service exfil | llm-service + redis + vault + admin-service | 9.8 | V-T6-002 → V-T7-004 → V-T7-002 → full secrets dump | baked-v3.0.0 |
 
 ---
 
-_v3.0.0 baseline: 11 vulns baked (T1: 5, T2: 6), 9 partial annotations, 34 deferred to Phases 2-4. Phase 6 full count ≥ 50._
+## Chain Map
+
+```
+V-T1-003 (build_hash leak)
+  └─► V-T2-002 (INSTANCE_SALT = build_hash → predictable reset token)
+        └─► Account takeover
+
+V-T2-001 (timing oracle) + V-T2-002 (weak token) → V-T3-003 (mass assign is_admin) → admin
+
+V-T4-003 (SSRF avatar)
+  └─► cloud-metadata-sim /latest/meta-data/iam/security-credentials/
+        └─► fake STS token → V-T7-002 (Vault token read) → V-T8-006
+
+V-T6-002 (prompt injection → pickle)
+  └─► V-T7-004 (Redis no-auth) → deserialize pickle → RCE
+        └─► V-T7-002 (VAULT_DEV_ROOT_TOKEN_ID in env) → Vault API → all secrets → V-T8-006
+
+V-T2-003 (OAuth CSRF)
+  └─► V-T4-007 (stored XSS in bio)
+        └─► V-T4-009 (admin branding SSTI) → admin session
+              └─► V-T8-005 full chain
+```
+
+_v3.0.0 baked count: T1:5, T2:6, T3:7, T4:11, T5:5, T6:7, T7:5, T8:6 = 52 intentional vulns baked._

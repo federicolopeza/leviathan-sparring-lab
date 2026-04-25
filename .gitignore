@@ -13,9 +13,10 @@ terraform.tfstate.*.backup
 /tmp/
 artifacts/
 
-# Engagements: per-run gitignored, _archive/ retained for v3
+# Engagements: per-run gitignored, _archive/ + baseline exploits retained for v3
 engagements/*
 !engagements/_archive/
+!engagements/_baseline-exploits/
 
 # Network captures
 *.pcap
