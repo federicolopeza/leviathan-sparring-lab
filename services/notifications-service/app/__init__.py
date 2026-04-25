@@ -1,0 +1,1 @@
+"""Melispy notifications service."""

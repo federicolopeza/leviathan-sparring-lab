@@ -1,7 +1,0 @@
----
-# Role: honeytokens — handlers
-
-  - name: restart auditd
-    ansible.builtin.systemd:
-      name: auditd
-      state: restarted

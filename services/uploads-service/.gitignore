@@ -1,0 +1,8 @@
+.benchmarks/
+.pytest-tmp*/
+.pytest_cache/
+.ruff_cache/
+.test-cache/
+.venv/
+pytest-cache-files-*/
+secret.txt

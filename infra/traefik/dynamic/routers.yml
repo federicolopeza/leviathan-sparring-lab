@@ -1,0 +1,15 @@
+# Phase 5 lock-down routes (file provider — supplements docker provider)
+# These override or add to docker-label-defined routes.
+
+http:
+  routers:
+    # Traefik dashboard — restricted to operator IP only
+    traefik-dashboard:
+      rule: "Host(`traefik-internal.melispy.com`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      service: api@internal
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-admin-allowlist@file
+        - security-headers@file
+      # Phase 5: add tls block with internal CA cert

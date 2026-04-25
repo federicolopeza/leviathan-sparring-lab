@@ -1,0 +1,125 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_LOKI",
+      "label": "Loki",
+      "type": "datasource",
+      "pluginId": "loki",
+      "pluginName": "Loki"
+    }
+  ],
+  "uid": "melispy-rate-limits",
+  "title": "Melispy \u2014 Rate Limits",
+  "schemaVersion": 36,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "429 Rate per Service",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "h": 8,
+        "w": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": ""
+          },
+          "expr": "sum by (service) (rate({job=~\".+\"} |= \"429\" [1m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Rate-Limit Hits by Client IP (Top 10)",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "h": 8,
+        "w": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": ""
+          },
+          "expr": "topk(10, sum by (client_ip) (rate({job=~\".+\"} |= \"429\" [5m])))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Blocked IPs Count",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "h": 8,
+        "w": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": ""
+          },
+          "expr": "count(sum by (client_ip) (count_over_time({job=~\".+\"} |= \"429\" [1h])) > 5)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    }
+  ]
+}

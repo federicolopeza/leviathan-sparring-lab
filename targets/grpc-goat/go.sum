@@ -1,2 +1,0 @@
-# go.sum — operator runs `go mod tidy` inside build stage; this file is a placeholder
-# The multi-stage Dockerfile runs `go mod download` which resolves and verifies checksums.

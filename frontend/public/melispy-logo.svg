@@ -1,0 +1,7 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Melispy">
+  <path d="M8 52V12h9l15 20 15-20h9v40h-9V26L34 43h-4L17 26v26H8Z" fill="currentColor"/>
+  <circle cx="14" cy="10" r="3" fill="currentColor"/>
+  <circle cx="50" cy="10" r="3" fill="currentColor"/>
+  <circle cx="32" cy="48" r="3" fill="currentColor"/>
+  <path d="M17 12h10M37 12h10M30 46 17 26M34 46l13-20" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" opacity=".55"/>
+</svg>

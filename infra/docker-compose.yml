@@ -1,0 +1,499 @@
+name: melispy
+
+x-service-defaults: &svc-defaults
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  # ─── Data tier ─────────────────────────────────────────────────────────────
+
+  postgres:
+    <<: *svc-defaults
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: melispy_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - data_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U melispy_admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    <<: *svc-defaults
+    # INTENTIONAL VULN V-T7-004: no auth on internal subnet
+    image: redis:7-alpine
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+    networks:
+      - data_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+
+  minio:
+    <<: *svc-defaults
+    image: minio/minio:latest
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - miniodata:/data
+    networks:
+      - data_net
+      - services_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio.rule=Host(`cdn.melispy.com`)"
+      - "traefik.http.routers.minio.entrypoints=websecure"
+      - "traefik.http.services.minio.loadbalancer.server.port=9000"
+    security_opt:
+      - no-new-privileges:true
+
+  vault:
+    <<: *svc-defaults
+    image: hashicorp/vault:1.17
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN_ID}
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./vault/policies:/vault/policies:ro
+    networks:
+      - data_net
+      - services_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vault.rule=Host(`vault.melispy.com`)"
+      - "traefik.http.routers.vault.entrypoints=websecure"
+      - "traefik.http.services.vault.loadbalancer.server.port=8200"
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── Edge ──────────────────────────────────────────────────────────────────
+
+  # V-T1-001: subdomains (app/api/admin/cdn/static/vault) visible via CT logs —
+  # crt.sh?q=melispy.com reveals full surface before any active scan.
+  traefik:
+    <<: *svc-defaults
+    image: traefik:v3.1
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./ca:/etc/traefik/ca:ro
+    networks:
+      - edge_net
+      - services_net
+    security_opt:
+      - no-new-privileges:true
+
+  cloudflared:
+    <<: *svc-defaults
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN}
+    networks:
+      - edge_net
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── Observability ──────────────────────────────────────────────────────────
+
+  loki:
+    <<: *svc-defaults
+    image: grafana/loki:3.0.0
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - ./loki/ruler:/loki/ruler:ro
+      - lokidata:/loki
+    networks:
+      - observe_net
+    security_opt:
+      - no-new-privileges:true
+
+  promtail:
+    <<: *svc-defaults
+    image: grafana/promtail:3.0.0
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./loki/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      # V-T7-006 INTENTIONAL VULN: docker.sock mounted readonly — post-compromise exec into any container
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - observe_net
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── Init jobs (run once with --profile init) ──────────────────────────────
+
+  minio-init:
+    # V-T1-002 INTENTIONAL VULN: sets avatars bucket to public-read + ListBucket
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./minio/init/setup-public-bucket.sh:/init.sh:ro
+    entrypoint: ["/bin/sh", "/init.sh"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_HOST: "minio:9000"
+    networks:
+      - data_net
+    profiles:
+      - init
+
+  # ─── Application microservices ──────────────────────────────────────────────
+
+  api-gateway:
+    <<: *svc-defaults
+    build:
+      context: ../services/api-gateway
+      dockerfile: Dockerfile
+    environment:
+      AUTH_SERVICE_URL: "http://auth-service:8000"
+      USERS_SERVICE_URL: "http://users-service:8000"
+      ORGS_SERVICE_URL: "http://orgs-service:8000"
+      BILLING_SERVICE_URL: "http://billing-service:8000"
+      UPLOADS_SERVICE_URL: "http://uploads-service:8000"
+      SEARCH_SERVICE_URL: "http://search-service:8000"
+      WEBHOOKS_SERVICE_URL: "http://webhooks-service:8000"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+      DATABASE_URL_AUDIT: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_admin"
+      REDIS_URL: "redis://redis:6379/0"
+      BUILD_HASH: ${BUILD_HASH:-dev}
+      GIT_SHA: ${GIT_SHA:-unknown}
+      AUDIT_LOG_HMAC_KEY: ${AUDIT_LOG_HMAC_KEY}
+      TIER_RATE_LIMIT_FREE: "60"
+      TIER_RATE_LIMIT_PRO: "600"
+      TIER_RATE_LIMIT_ENTERPRISE: "6000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - edge_net
+      - services_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.melispy.com`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.services.api.loadbalancer.server.port=8000"
+    security_opt:
+      - no-new-privileges:true
+
+  auth-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/auth-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_auth"
+      REDIS_URL: "redis://redis:6379/1"
+      JWT_PRIVATE_KEY_PEM: ${JWT_PRIVATE_KEY_PEM}
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+      INSTANCE_SALT: ${INSTANCE_SALT}
+      BUILD_HASH: ${BUILD_HASH:-dev}
+      GIT_SHA: ${GIT_SHA:-unknown}
+      SERVICE_VERSION: "3.0.0"
+      INVITATION_TTL_DAYS: "7"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  users-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/users-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_users"
+      AUTH_DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_auth"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  orgs-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/orgs-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_orgs"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  billing-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/billing-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_billing"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  uploads-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/uploads-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_uploads"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+      MINIO_ENDPOINT: "minio:9000"
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: "uploads"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  search-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/search-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_search"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  webhooks-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/webhooks-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_webhooks"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  agents-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/agents-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:@postgres:5432/melispy_agents"
+      JWT_PUBLIC_KEY_PEM:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  llm-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/llm-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:@postgres:5432/melispy_llm"
+      JWT_PUBLIC_KEY_PEM:
+      LLM_MOCK_MODE: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── Phase 4 services ──────────────────────────────────────────────────────
+
+  admin-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/admin-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${POSTGRES_PASSWORD}@postgres:5432/melispy_admin"
+      DATABASE_URL_AUTH: "postgresql+asyncpg://melispy_app:${POSTGRES_PASSWORD}@postgres:5432/melispy_auth"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+      AUDIT_LOG_HMAC_KEY: ${AUDIT_LOG_HMAC_KEY}
+      BUILD_HASH: ${BUILD_HASH:-dev}
+      # V-T7-002 INTENTIONAL VULN: Vault root token injected into app env — readable via /proc/1/environ post-RCE
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN_ID:-dev-root-token}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin.rule=Host(`admin.melispy.com`)"
+      - "traefik.http.routers.admin.entrypoints=websecure"
+      - "traefik.http.routers.admin.middlewares=security-headers@file,ratelimit-default@file"
+      - "traefik.http.services.admin.loadbalancer.server.port=8080"
+    security_opt:
+      - no-new-privileges:true
+
+  notifications-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/notifications-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${POSTGRES_PASSWORD}@postgres:5432/melispy_notifications"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+      AUDIT_LOG_HMAC_KEY: ${AUDIT_LOG_HMAC_KEY}
+      BUILD_HASH: ${BUILD_HASH:-dev}
+      # V-T7-005 INTENTIONAL VULN: MinIO root (admin-tier) creds in service env — not a scoped service account
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ENDPOINT: "http://minio:9000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.notifications.rule=Host(`notifications.melispy.com`)"
+      - "traefik.http.routers.notifications.entrypoints=websecure"
+      - "traefik.http.services.notifications.loadbalancer.server.port=8080"
+    security_opt:
+      - no-new-privileges:true
+
+  # V-T8-001 target: SSRF via avatar_url → this endpoint → fake STS creds
+  cloud-metadata-sim:
+    <<: *svc-defaults
+    build:
+      context: ../services/cloud-metadata-sim
+      dockerfile: Dockerfile
+    networks:
+      - services_net
+      - data_net
+    # Bind to 169.254.169.254 on the internal network (requires host networking or macvlan in prod;
+    # in compose: alias used by upstream services to reach the sim)
+    labels:
+      - "traefik.enable=false"
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── Honeypot (preserved v2) ────────────────────────────────────────────────
+
+  honeypot-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/honeypot-service
+      dockerfile: Dockerfile
+    networks:
+      - services_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.honeypot.rule=Host(`traefik.melispy.com`)"
+      - "traefik.http.routers.honeypot.entrypoints=websecure"
+      - "traefik.http.routers.honeypot.middlewares=security-headers@file,ratelimit-strict@file"
+      - "traefik.http.services.honeypot.loadbalancer.server.port=8080"
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  edge_net:
+    driver: bridge
+  data_net:
+    driver: bridge
+    internal: true
+  services_net:
+    driver: bridge
+  observe_net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  lokidata:

@@ -1,0 +1,50 @@
+groups:
+  - name: melispy-security-alerts
+    interval: 30s
+    rules:
+      - alert: SQLiDetected
+        expr: |
+          rate({service=~".+"} |= "UNION" |= "SELECT" [5m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "SQL injection pattern detected"
+          description: "A log stream contains UNION SELECT patterns consistent with SQL injection attempts."
+
+      - alert: SSRFAttempt
+        expr: |
+          rate({service="users-service"} |= "169.254" [5m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "SSRF metadata access attempt detected"
+          description: "users-service logged access to 169.254 metadata address space."
+
+      - alert: AuthBruteForce
+        expr: |
+          sum by (client_ip) (rate({service="auth-service"} | json | status_code="401" [1m])) > 10
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          summary: "Authentication brute-force pattern detected"
+          description: "auth-service returned more than 10 unauthorized responses per minute for a client IP."
+
+      - alert: DockerSockAccess
+        expr: |
+          rate({service="promtail"} |= "docker.sock" [1m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "Docker socket access detected"
+          description: "Promtail logs reference docker.sock access path for V-T7-006."
+
+      - alert: RateLimitSpike
+        expr: |
+          rate({service=~".+"} | json | status_code="429" [2m]) > 50
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Rate-limit spike detected"
+          description: "A service is emitting more than 50 HTTP 429 responses over a 2 minute window."

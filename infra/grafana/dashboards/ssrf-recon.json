@@ -1,0 +1,146 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_LOKI",
+      "label": "Loki",
+      "type": "datasource",
+      "pluginId": "loki",
+      "pluginName": "Loki"
+    }
+  ],
+  "uid": "melispy-ssrf-recon",
+  "title": "Melispy \u2014 SSRF & Recon Signals",
+  "schemaVersion": 36,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "logs",
+      "title": "Outbound HEAD from Avatar Endpoint",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "h": 8,
+        "w": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": ""
+          },
+          "expr": "{service=\"users-service\"} |= \"avatar\" |= \"HEAD\""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "IMDS Probe Attempts (169.254.x.x)",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "h": 8,
+        "w": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": ""
+          },
+          "expr": "sum(count_over_time({service=\"users-service\"} |~ \"169\\\\.254\\\\.\" [1h]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "SQLi in Query Params",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "h": 8,
+        "w": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": ""
+          },
+          "expr": "sum(rate({job=~\".+\"} |~ \"(?i)(UNION|SELECT)\" [5m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "logs",
+      "title": "Source Map Requests (/static/*.js.map)",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "h": 8,
+        "w": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": ""
+          },
+          "expr": "{job=~\".+\"} |~ \"/static/.*\\\\.js\\\\.map\""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    }
+  ]
+}

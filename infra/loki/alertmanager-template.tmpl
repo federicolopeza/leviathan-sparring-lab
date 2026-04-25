@@ -1,0 +1,9 @@
+{{ define "melispy.title" -}}
+[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} — Melispy Security
+{{- end }}
+
+{{ define "melispy.text" -}}
+Alert summary: {{ if .CommonAnnotations.summary }}{{ .CommonAnnotations.summary }}{{ else }}{{ .CommonLabels.alertname }}{{ end }}
+Severity: {{ .CommonLabels.severity }}
+Description: {{ if .CommonAnnotations.description }}{{ .CommonAnnotations.description }}{{ else }}No description provided.{{ end }}
+{{- end }}

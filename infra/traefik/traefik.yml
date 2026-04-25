@@ -1,0 +1,45 @@
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+log:
+  level: INFO
+
+accessLog:
+  format: json
+
+api:
+  dashboard: true
+  # Phase 5: set insecure: false and add CF Access + allowlist
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    network: edge_net
+    exposedByDefault: false
+    watch: true
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+# Phase 5: populate internal CA cert path
+# serversTransport:
+#   rootCAs:
+#     - /etc/traefik/ca/ca-cert.pem
+
+# Phase 5: internal CA certificate resolver
+# certificatesResolvers:
+#   internal-ca:
+#     acme:
+#       ...

@@ -1,0 +1,154 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_LOKI",
+      "label": "Loki",
+      "type": "datasource",
+      "pluginId": "loki",
+      "pluginName": "Loki"
+    }
+  ],
+  "uid": "melispy-search-queries",
+  "title": "Melispy \u2014 Search Activity",
+  "schemaVersion": 36,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Searches per Minute",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "h": 8,
+        "w": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": ""
+          },
+          "expr": "sum(rate({service=\"search-service\"} [1m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Slow Queries (>100ms)",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "h": 8,
+        "w": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": ""
+          },
+          "expr": "sum(rate({service=\"search-service\"} | json | response_time_ms > 100 [1m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "SQLi Patterns Detected",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "h": 8,
+        "w": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": ""
+          },
+          "expr": "sum(count_over_time({service=\"search-service\"} |~ \"(?i)(UNION|SELECT)\" [1h]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Recent Saved Searches",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "h": 8,
+        "w": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": ""
+          },
+          "expr": "{service=\"search-service\"} |= \"saved_search\" | json | line_format \"{{.user}} \u2014 {{.query}}\""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    }
+  ]
+}
