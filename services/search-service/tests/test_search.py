@@ -125,9 +125,10 @@ async def test_v_t4_008_sqli_via_saved_search_run(
     auth_headers: Callable[[str, str], dict[str, str]],
     user_ids: dict[str, str],
 ) -> None:
+    # Comment-truncate trailing %' so UNION returns rows from ALL orgs (incl. ORG_B).
     payload = (
-        "x' UNION SELECT id,org_id,title,body,tags,created_at,updated_at "
-        "FROM indexed_documents WHERE '1'='1"
+        "x%' UNION SELECT id,org_id,title,body,tags,created_at,updated_at "
+        "FROM indexed_documents -- "
     )
     headers = auth_headers(user_ids["a"])
     create = await client.post(
@@ -152,9 +153,11 @@ async def test_v_t4_008_parameterized_search_is_safe(
     auth_headers: Callable[[str, str], dict[str, str]],
     user_ids: dict[str, str],
 ) -> None:
+    # Same comment-truncate payload as the SQLi reproducer — but parameterized path
+    # binds it as a single LIKE term; UNION never executes.
     payload = (
-        "x' UNION SELECT id,org_id,title,body,tags,created_at,updated_at "
-        "FROM indexed_documents WHERE '1'='1"
+        "x%' UNION SELECT id,org_id,title,body,tags,created_at,updated_at "
+        "FROM indexed_documents -- "
     )
     response = await client.get(
         "/v1/search",
