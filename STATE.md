@@ -61,7 +61,7 @@ Tener un **target realista 2026** corriendo 24/7 sobre `melispy.com` con apps qu
 | `gt-promptme` | LLM proxy (prompt injection, system override) | `chat`, `assistant` |
 | `gt-tenant` | SaaS multi-tenant billing (IDOR, tenant escape) | `billing`, `saas` |
 | `gt-mobile` | Mobile BFF (weak JWT alg=none, hardcoded keys, IDOR) | `mobile`, `app` |
-| `gt-juice` | OWASP Juice Shop v17.2 (top 10 + tutorial flags) | `shop`, `store` |
+| ~~gt-juice~~ | **REMOVED** — Juice Shop está en training data de Leviathan (`arsenal/benchmarks/runner.py` lo reconoce instant). Findings ahí = freebies, no miden capacidad real. Para benchmark genuino sólo apps custom 2026. | ~~shop~~ |
 
 ### Capa 4: Engagement (humanos + tooling)
 | Quien | Rol |

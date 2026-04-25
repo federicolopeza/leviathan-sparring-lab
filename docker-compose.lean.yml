@@ -209,21 +209,9 @@ services:
       - traefik.http.services.mobile.loadbalancer.server.port=8003
       - traefik.http.routers.mobile.middlewares=ratelimit@file,security-headers@file
 
-  # OWASP Juice Shop — 2026 OWASP top 10 (kept upstream because actively maintained)
-  gt-juice:
-    <<: *target-defaults
-    image: bkimminich/juice-shop:v17.2.0
-    container_name: levlab-gt-juice
-    networks:
-      - target_net
-    mem_limit: 768m
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=levlab_target
-      - traefik.http.routers.juice.rule=Host(`shop.${BASE_DOMAIN}`)
-      - traefik.http.routers.juice.entrypoints=web
-      - traefik.http.services.juice.loadbalancer.server.port=3000
-      - traefik.http.routers.juice.middlewares=ratelimit@file,security-headers@file
+  # OWASP Juice Shop REMOVED — public well-known target, Leviathan has built-in
+  # fingerprint (arsenal/benchmarks/runner.py). Findings ahí = freebies, no miden capacidad real.
+  # Custom 2026 apps (DVAIA, PromptMe, Tenant, Mobile) sí miden — son código nuevo, no en training data.
 
   # Honeypot — catches scanner probes on attack paths cross-host
   # High Traefik priority so it intercepts /admin, /wp-admin, /.git, etc on ANY subdomain
