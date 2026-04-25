@@ -1,0 +1,128 @@
+# Falco custom rules — Leviathan Sparring Lab v2 (anti-Gonxa TTPs)
+# Loaded via -f /etc/falco/falco_rules.local.yaml
+# Severity scale: Emergency, Alert, Critical, Error, Warning, Notice, Informational, Debug
+
+- rule: Reverse Shell Spawn
+  desc: Detects classic reverse shell patterns (curl|bash, wget|sh, nc, socat)
+  condition: >
+    spawned_process and (
+      (proc.name in (bash, sh, dash, zsh, ksh, csh, tcsh, fish)) and
+      (proc.cmdline contains "bash -i" or
+       proc.cmdline contains "sh -i" or
+       proc.cmdline contains "0>&1" or
+       proc.cmdline contains "/dev/tcp/" or
+       proc.cmdline contains "/dev/udp/" or
+       proc.pname in (curl, wget, nc, ncat, socat))
+    )
+  output: "Reverse shell pattern detected (user=%user.name proc=%proc.name pproc=%proc.pname cmd=%proc.cmdline container=%container.name)"
+  priority: CRITICAL
+  tags: [pentest, gonxa, network, mitre_command_and_control]
+
+- rule: Tmp Script Execution
+  desc: Script executed from /tmp or /dev/shm — common attacker drop zone
+  condition: >
+    spawned_process and
+    (proc.exepath startswith /tmp/ or
+     proc.exepath startswith /dev/shm/ or
+     proc.exepath startswith /var/tmp/) and
+    not proc.name in (apt, dpkg, snap)
+  output: "Suspicious binary execution from world-writable dir (proc=%proc.name path=%proc.exepath user=%user.name container=%container.name)"
+  priority: WARNING
+  tags: [pentest, gonxa, persistence, mitre_execution]
+
+- rule: SSH Key Write
+  desc: Write to authorized_keys outside sshd
+  condition: >
+    open_write and
+    (fd.name endswith /.ssh/authorized_keys or
+     fd.name endswith /.ssh/authorized_keys2) and
+    not proc.name in (sshd, sftp-server, scp)
+  output: "SSH authorized_keys modified (file=%fd.name proc=%proc.name user=%user.name container=%container.name)"
+  priority: CRITICAL
+  tags: [pentest, gonxa, persistence, mitre_persistence]
+
+- rule: Crontab Modification
+  desc: Cron file written
+  condition: >
+    open_write and
+    (fd.name startswith /etc/cron.d/ or
+     fd.name startswith /etc/cron.daily/ or
+     fd.name startswith /etc/cron.hourly/ or
+     fd.name startswith /etc/cron.weekly/ or
+     fd.name startswith /etc/cron.monthly/ or
+     fd.name = /etc/crontab or
+     fd.name startswith /var/spool/cron/) and
+    not proc.name in (crontab, dpkg, apt, systemd-tmpfiles)
+  output: "Cron modification detected (file=%fd.name proc=%proc.name user=%user.name container=%container.name)"
+  priority: ERROR
+  tags: [pentest, gonxa, persistence, mitre_persistence]
+
+- rule: Sudoers Modification
+  desc: Direct write to sudoers files
+  condition: >
+    open_write and
+    (fd.name = /etc/sudoers or fd.name startswith /etc/sudoers.d/) and
+    not proc.name in (visudo, dpkg, apt)
+  output: "Sudoers file modified (file=%fd.name proc=%proc.name user=%user.name)"
+  priority: CRITICAL
+  tags: [pentest, gonxa, privesc, mitre_privilege_escalation]
+
+- rule: Container Escape Attempt
+  desc: Mount of host paths inside container or namespace manipulation
+  condition: >
+    spawned_process and
+    container and
+    (proc.name in (mount, nsenter, unshare, capsh) or
+     proc.cmdline contains "/proc/1/root" or
+     proc.cmdline contains "docker.sock" or
+     proc.cmdline contains "/var/run/docker.sock")
+  output: "Possible container escape attempt (proc=%proc.name cmd=%proc.cmdline container=%container.name)"
+  priority: CRITICAL
+  tags: [pentest, gonxa, escape, mitre_privilege_escalation]
+
+- rule: Sensitive File Read in Container
+  desc: Common sensitive host files accessed
+  condition: >
+    open_read and
+    container and
+    (fd.name = /etc/shadow or
+     fd.name = /etc/passwd or
+     fd.name startswith /root/.ssh/ or
+     fd.name startswith /home/ or
+     fd.name = /etc/kubernetes/admin.conf or
+     fd.name startswith /var/lib/kubelet/)
+  output: "Sensitive file read inside container (file=%fd.name proc=%proc.name container=%container.name)"
+  priority: WARNING
+  tags: [pentest, gonxa, recon, mitre_credential_access]
+
+# Outbound Network From Target Container — disabled, complex IP filter syntax
+# target_net `internal: true` already prevents egress at docker network level
+# Reactivar si se quiere logging granular per-container
+#
+# - rule: Outbound Network From Target Container
+#   desc: target_net containers should NOT egress
+#   condition: ...
+#   output: "..."
+#   priority: WARNING
+
+- rule: Privileged Container Spawned
+  desc: New privileged container — should be only falco itself
+  condition: >
+    spawned_process and
+    proc.pname = dockerd and
+    proc.cmdline contains "--privileged" and
+    not proc.cmdline contains "falco"
+  output: "Unexpected privileged container spawn (cmd=%proc.cmdline)"
+  priority: ALERT
+  tags: [pentest, gonxa, mitre_privilege_escalation]
+
+- rule: Persistent Backdoor Service
+  desc: New systemd unit installed
+  condition: >
+    open_write and
+    (fd.name startswith /etc/systemd/system/ or
+     fd.name startswith /lib/systemd/system/) and
+    not proc.name in (dpkg, apt, systemctl, systemd-tmpfiles)
+  output: "Systemd unit installed (file=%fd.name proc=%proc.name user=%user.name)"
+  priority: ERROR
+  tags: [pentest, gonxa, persistence]

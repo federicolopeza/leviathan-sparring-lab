@@ -1,0 +1,412 @@
+# Leviathan Sparring Lab v2 — lean compose
+# 6 containers core + GT slot + opt-in profiles
+# Hardening: userns-remap (host), no-new-privileges, cap_drop ALL, read_only, seccomp, apparmor
+# Networks: mgmt_net (cloudflared/traefik/loki), attacker_net (kali/metasploit), target_net (gt-active, internal)
+#
+# Usage:
+#   docker compose -f docker-compose.lean.yml up -d                       # core (6)
+#   docker compose -f docker-compose.lean.yml --profile defense up -d     # +falco/crowdsec
+#   docker compose -f docker-compose.lean.yml --profile honeypot up -d    # +cowrie
+#   docker compose -f docker-compose.lean.yml --profile dashboards up -d  # +grafana
+#
+# GT swap: ./scripts/gt-rotate.sh <stack-name>
+
+x-defaults: &defaults
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "3"
+      tag: "{{.Name}}"
+
+x-target-defaults: &target-defaults
+  <<: *defaults
+  # GT is intentionally vulnerable — security via net isolation + cap_drop, NOT read_only
+  # (Apache/PHP/etc need writable paths for sessions/locks/uploads)
+  tmpfs:
+    - /tmp:rw,size=64m
+  pids_limit: 256
+  mem_limit: 512m
+  cpus: 0.5
+
+services:
+  # ─── 1. CLOUDFLARED — egress tunnel, cero IP pública entrante ────────
+  cloudflared:
+    <<: *defaults
+    image: cloudflare/cloudflared:2025.1.1
+    container_name: levlab-cloudflared
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN:?missing CF_TUNNEL_TOKEN in .env.lab}
+    networks:
+      - mgmt_net
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "info", "${CF_TUNNEL_ID}"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  # ─── 2. TRAEFIK — TLS interno + routing + middleware ──────────────────
+  traefik:
+    <<: *defaults
+    image: traefik:v3.5.3
+    container_name: levlab-traefik
+    environment:
+      DOCKER_API_VERSION: "1.40"
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --metrics.prometheus=true
+      - --log.level=INFO
+      - --accesslog=true
+      - --accesslog.fields.headers.defaultmode=keep
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./deploy/traefik/dynamic:/etc/traefik/dynamic:ro
+    networks:
+      - mgmt_net
+      - target_net
+    ports:
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
+      - "127.0.0.1:8080:8080"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dashboard.rule=Host(`traefik.${BASE_DOMAIN}`)
+      - traefik.http.routers.dashboard.entrypoints=web
+      - traefik.http.routers.dashboard.service=api@internal
+      - traefik.http.routers.dashboard.middlewares=auth-admin@file
+
+  # ─── 3. KALI — toolkit attacker side ─────────────────────────────────
+  kali:
+    <<: *defaults
+    image: kalilinux/kali-rolling:latest
+    container_name: levlab-kali
+    command: ["sleep", "infinity"]
+    networks:
+      - attacker_net
+    volumes:
+      - kali_home:/root
+      - ./engagements:/engagements:rw
+    cap_add:
+      - NET_RAW  # nmap raw sockets
+      - NET_ADMIN
+    mem_limit: 1024m
+    cpus: 1.0
+    profiles: ["", "default", "core"]
+
+  # ─── 4. METASPLOIT — exploitation framework ──────────────────────────
+  metasploit:
+    <<: *defaults
+    image: metasploitframework/metasploit-framework:latest
+    container_name: levlab-metasploit
+    command: ["sleep", "infinity"]
+    user: "0"
+    stdin_open: true
+    tty: true
+    volumes:
+      - msf_loot:/home/msf/.msf4
+      - ./engagements:/engagements:rw
+    networks:
+      - attacker_net
+    mem_limit: 1024m
+    cpus: 1.0
+    profiles: ["", "default", "core"]
+
+  # ─── 5. GT TARGETS — 2026 stack (AI/LLM, SaaS, Fintech, Modern API) ───
+  # 5 GTs simultaneous. Total RAM ~2GB. Built from targets/<name>/Dockerfile.
+
+  # AI agent with tool-calling RCE (FastAPI + Pydantic v2)
+  gt-dvaia:
+    <<: *target-defaults
+    build:
+      context: ./targets/damn-vulnerable-ai-agent
+      args:
+        BUILD_COMMIT: v2-2026
+    image: levlab/dvaia:v2
+    container_name: levlab-gt-dvaia
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8002"]
+    networks:
+      - target_net
+    mem_limit: 256m
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=levlab_target
+      - traefik.http.routers.dvaia.rule=Host(`agent.${BASE_DOMAIN}`)
+      - traefik.http.routers.dvaia.entrypoints=web
+      - traefik.http.services.dvaia.loadbalancer.server.port=8002
+      - traefik.http.routers.dvaia.middlewares=ratelimit@file,security-headers@file
+
+  # LLM proxy with prompt injection + missing auth (FastAPI)
+  gt-promptme:
+    <<: *target-defaults
+    build:
+      context: ./targets/promptme
+      args:
+        BUILD_COMMIT: v2-2026
+    image: levlab/promptme:v2
+    container_name: levlab-gt-promptme
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001"]
+    networks:
+      - target_net
+    mem_limit: 256m
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=levlab_target
+      - traefik.http.routers.promptme.rule=Host(`chat.${BASE_DOMAIN}`)
+      - traefik.http.routers.promptme.entrypoints=web
+      - traefik.http.services.promptme.loadbalancer.server.port=8001
+      - traefik.http.routers.promptme.middlewares=ratelimit@file,security-headers@file
+
+  # SaaS multi-tenant billing API (fintech-style, IDOR + tenant escape)
+  gt-tenant:
+    <<: *target-defaults
+    build:
+      context: ./targets/tenant-billing-api
+      args:
+        BUILD_COMMIT: v2-2026
+    image: levlab/tenant-billing:v2
+    container_name: levlab-gt-tenant
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+    networks:
+      - target_net
+    mem_limit: 256m
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=levlab_target
+      - traefik.http.routers.tenant.rule=Host(`billing.${BASE_DOMAIN}`)
+      - traefik.http.routers.tenant.entrypoints=web
+      - traefik.http.services.tenant.loadbalancer.server.port=8000
+      - traefik.http.routers.tenant.middlewares=ratelimit@file,security-headers@file
+
+  # Mobile BFF — hardcoded keys, weak JWT (alg=none), IDOR
+  gt-mobile:
+    <<: *target-defaults
+    build:
+      context: ./targets/mobile-backend-weak
+      args:
+        BUILD_COMMIT: v2-2026
+    image: levlab/mobile-bff:v2
+    container_name: levlab-gt-mobile
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8003"]
+    networks:
+      - target_net
+    mem_limit: 256m
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=levlab_target
+      - traefik.http.routers.mobile.rule=Host(`mobile.${BASE_DOMAIN}`)
+      - traefik.http.routers.mobile.entrypoints=web
+      - traefik.http.services.mobile.loadbalancer.server.port=8003
+      - traefik.http.routers.mobile.middlewares=ratelimit@file,security-headers@file
+
+  # OWASP Juice Shop — 2026 OWASP top 10 (kept upstream because actively maintained)
+  gt-juice:
+    <<: *target-defaults
+    image: bkimminich/juice-shop:v17.2.0
+    container_name: levlab-gt-juice
+    networks:
+      - target_net
+    mem_limit: 768m
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=levlab_target
+      - traefik.http.routers.juice.rule=Host(`shop.${BASE_DOMAIN}`)
+      - traefik.http.routers.juice.entrypoints=web
+      - traefik.http.services.juice.loadbalancer.server.port=3000
+      - traefik.http.routers.juice.middlewares=ratelimit@file,security-headers@file
+
+  # Honeypot — catches scanner probes on attack paths cross-host
+  # High Traefik priority so it intercepts /admin, /wp-admin, /.git, etc on ANY subdomain
+  gt-honeypot:
+    <<: *target-defaults
+    build:
+      context: ./targets/honeypot
+      args:
+        BUILD: v1
+    image: levlab/honeypot:v1
+    container_name: levlab-gt-honeypot
+    networks:
+      - target_net
+    mem_limit: 128m
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=levlab_target
+      - traefik.http.services.honeypot.loadbalancer.server.port=8090
+      # Priority 200 → override apps' catchall 404 for these paths
+      - traefik.http.routers.honeypot.rule=PathPrefix(`/admin`) || PathPrefix(`/administrator`) || PathPrefix(`/wp-admin`) || PathPrefix(`/wp-login`) || Path(`/xmlrpc.php`) || PathPrefix(`/.git`) || Path(`/.env`) || Path(`/.env.local`) || Path(`/.env.production`) || PathPrefix(`/.aws`) || PathPrefix(`/phpmyadmin`) || PathPrefix(`/pma`) || PathPrefix(`/actuator`) || PathPrefix(`/console`) || PathPrefix(`/manager`) || Path(`/server-status`) || Path(`/server-info`) || PathPrefix(`/api/v1/admin`) || PathPrefix(`/api/internal`) || PathPrefix(`/v1/internal`) || PathPrefix(`/.well-known/internal`) || PathPrefix(`/.well-known/openid`) || Path(`/.well-known/jwks.json`) || PathPrefix(`/oauth/authorize`) || PathPrefix(`/oauth/token`) || Path(`/swagger.json`) || PathPrefix(`/swagger-ui`) || PathPrefix(`/api-docs`) || Path(`/openapi.yaml`) || Path(`/redoc.html`) || Path(`/login.action`) || PathPrefix(`/_next/static`)
+      - traefik.http.routers.honeypot.entrypoints=web
+      - traefik.http.routers.honeypot.priority=200
+      - traefik.http.routers.honeypot.middlewares=ratelimit-strict@file,security-headers@file
+
+  # Landing page — SaaS-looking decoy front (anti-recon: looks legit, leaks little)
+  gt-landing:
+    <<: *target-defaults
+    image: nginx:1.27-alpine
+    container_name: levlab-gt-landing
+    volumes:
+      - ./deploy/landing:/usr/share/nginx/html:ro
+    networks:
+      - target_net
+    mem_limit: 64m
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=levlab_target
+      - traefik.http.routers.landing.rule=Host(`${BASE_DOMAIN}`) || Host(`www.${BASE_DOMAIN}`)
+      - traefik.http.routers.landing.entrypoints=web
+      - traefik.http.services.landing.loadbalancer.server.port=80
+      - traefik.http.routers.landing.middlewares=security-headers@file
+
+  # ─── 6. LOKI + PROMTAIL — logs centralizados ─────────────────────────
+  loki:
+    <<: *defaults
+    image: grafana/loki:3.2.1
+    container_name: levlab-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./deploy/observability/loki-local-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - mgmt_net
+    mem_limit: 512m
+    cpus: 0.5
+
+  promtail:
+    <<: *defaults
+    image: grafana/promtail:3.2.1
+    container_name: levlab-promtail
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./deploy/observability/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/host/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - mgmt_net
+    depends_on:
+      - loki
+    mem_limit: 256m
+    cpus: 0.3
+
+  # ════════════════════════════════════════════════════════════════════
+  # OPT-IN PROFILES
+  # ════════════════════════════════════════════════════════════════════
+
+  # ─── DEFENSE PROFILE — runtime detection ─────────────────────────────
+  falco:
+    <<: *defaults
+    image: falcosecurity/falco:0.39.0
+    container_name: levlab-falco
+    profiles: ["defense"]
+    privileged: true
+    command: ["/usr/bin/falco", "-o", "engine.kind=ebpf", "-pc"]
+    environment:
+      FALCO_BPF_PROBE: ""
+      HOST_ROOT: "/host"
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock:ro
+      - /dev:/host/dev:rw
+      - /proc:/host/proc:ro
+      - /boot:/host/boot:ro
+      - /lib/modules:/host/lib/modules:ro
+      - /usr:/host/usr:ro
+      - /etc:/host/etc:ro
+      - ./deploy/falco/falco_rules.local.yaml:/etc/falco/falco_rules.local.yaml:ro
+    pid: host
+    mem_limit: 512m
+
+  crowdsec:
+    <<: *defaults
+    image: crowdsecurity/crowdsec:v1.6.4
+    container_name: levlab-crowdsec
+    profiles: ["defense"]
+    environment:
+      COLLECTIONS: "crowdsecurity/traefik crowdsecurity/sshd crowdsecurity/linux"
+      GID: ${GID-1000}
+    volumes:
+      - crowdsec_db:/var/lib/crowdsec/data
+      - crowdsec_config:/etc/crowdsec
+      - ./deploy/traefik:/var/log/traefik:ro
+      - /var/log/auth.log:/var/log/auth.log:ro
+    networks:
+      - mgmt_net
+
+  # ─── HONEYPOT PROFILE — SSH trap ─────────────────────────────────────
+  cowrie:
+    <<: *defaults
+    image: cowrie/cowrie:v2.5.0
+    container_name: levlab-cowrie
+    profiles: ["honeypot"]
+    ports:
+      - "0.0.0.0:2222:2222"  # exposed only via firewall rule + WG
+    volumes:
+      - cowrie_logs:/cowrie/cowrie-git/var/log/cowrie
+      - cowrie_dl:/cowrie/cowrie-git/var/lib/cowrie/downloads
+    networks:
+      - mgmt_net  # logs go to loki via promtail
+    mem_limit: 256m
+
+  # ─── DASHBOARDS PROFILE — Grafana on-demand ──────────────────────────
+  grafana:
+    <<: *defaults
+    image: grafana/grafana:11.3.0
+    container_name: levlab-grafana
+    profiles: ["dashboards"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PW:?missing GRAFANA_ADMIN_PW}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deploy/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - mgmt_net
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.grafana.rule=Host(`grafana.${BASE_DOMAIN}`)
+      - traefik.http.routers.grafana.entrypoints=websecure
+      - traefik.http.routers.grafana.tls=true
+      - traefik.http.routers.grafana.middlewares=auth-admin@file,cf-access@file
+    mem_limit: 512m
+
+# ─── NETWORKS ──────────────────────────────────────────────────────────
+networks:
+  mgmt_net:
+    name: levlab_mgmt
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.10.0/24
+  attacker_net:
+    name: levlab_attacker
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.20.0/24
+  target_net:
+    name: levlab_target
+    driver: bridge
+    internal: true  # no egress salvo via traefik proxy whitelisted
+    ipam:
+      config:
+        - subnet: 172.30.30.0/24
+
+# ─── VOLUMES ───────────────────────────────────────────────────────────
+volumes:
+  loki_data:
+  kali_home:
+  msf_loot:
+  cowrie_logs:
+  cowrie_dl:
+  crowdsec_db:
+  crowdsec_config:
+  grafana_data:

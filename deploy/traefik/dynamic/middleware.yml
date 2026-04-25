@@ -1,0 +1,73 @@
+# Traefik dynamic middleware — Leviathan Sparring Lab v2
+# Loaded by --providers.file.directory=/etc/traefik/dynamic
+http:
+  middlewares:
+
+    # ─── Auth admin (basic auth + IP allowlist) ─────────────────────────
+    # User: levop / Pass: replace via htpasswd, hash below is placeholder
+    # Generate: htpasswd -nb levop <password>
+    auth-admin:
+      chain:
+        middlewares:
+          - admin-ipwhitelist
+          - admin-basicauth
+
+    admin-ipwhitelist:
+      ipAllowList:
+        sourceRange:
+          - 10.8.0.0/24       # WireGuard peers
+          - 179.24.190.234/32 # operator public IP
+          - 172.30.10.0/24    # mgmt_net (cloudflared egress)
+
+    admin-basicauth:
+      basicAuth:
+        users:
+          # Default placeholder — REPLACE via:
+          # echo "$(htpasswd -nb levop 'changeme')" >> /opt/levlab/deploy/traefik/dynamic/admin-users.txt
+          - "levop:$apr1$h2zjN5sX$JKZnTQyVQGg/m2j0zR6mZ0"
+        realm: "Levlab Admin"
+
+    # ─── Rate limiting ──────────────────────────────────────────────────
+    ratelimit:
+      rateLimit:
+        average: 50
+        burst: 100
+        period: 1s
+
+    # ─── Strict rate limit (auth endpoints) ─────────────────────────────
+    ratelimit-strict:
+      rateLimit:
+        average: 5
+        burst: 10
+        period: 1m
+
+    # ─── Security headers ───────────────────────────────────────────────
+    security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        permissionsPolicy: "geolocation=(), microphone=(), camera=()"
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        customResponseHeaders:
+          Server: "nginx"
+          X-Powered-By: ""
+
+    # ─── Cloudflare Access verifier (zero-trust admin) ──────────────────
+    # Forwards CF-Access-Jwt-Assertion to verifier
+    cf-access:
+      forwardAuth:
+        address: "http://traefik-forward-auth:4181"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "X-Forwarded-User"
+
+    # ─── Strip server fingerprint ───────────────────────────────────────
+    strip-server:
+      headers:
+        customResponseHeaders:
+          Server: ""
+          X-Powered-By: ""

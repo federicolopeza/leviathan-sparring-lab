@@ -1,64 +1,126 @@
 """
-mobile-backend-weak — deliberately vulnerable FastAPI mobile backend
-Intentional flaws: hardcoded API keys in responses, weak JWT (alg=none accepted),
-IDOR on /user/<id>, no rate limiting, debug endpoints
+Mobile BFF — production-style. Auth required.
+Vulns intencionales (post-auth):
+  - JWT acepta alg=none (vuln retained)
+  - IDOR en /v1/users/{uid} sin ownership check
+  - login flow accepts cualquier credential pero firma JWT con uid=1 (downgrade)
+No info disclosure pre-auth: docs disabled, /health minimal, NO debug endpoints.
 """
-import time
-from fastapi import FastAPI, Header, Path, HTTPException
+import time, json, base64
+from typing import Optional
+from fastapi import FastAPI, Header, HTTPException, Path, Request
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel
-import jwt
 
-app = FastAPI(title="MobileBackend", docs_url="/docs")
+app = FastAPI(title="api", docs_url=None, redoc_url=None, openapi_url=None)
 
-# Intentional: hardcoded credentials and keys
-HARDCODED_API_KEY = "mob-api-key-lab-000000000000001"
-JWT_SECRET        = "mobile-jwt-secret-lab-0000001"
-JWT_ALGORITHMS    = ["HS256", "none"]  # Intentional: alg=none accepted
+JWT_SECRET = "melispy-mobile-2026q1"  # weak — descubrible vía JWT brute
+
+# Account lockout state (in-memory; en prod sería Redis)
+LOCKOUT: dict = {}  # ip -> {"fails": int, "until": ts}
+LOCKOUT_THRESHOLD = 5
+LOCKOUT_DURATION = 900  # 15 min
 
 USERS = {
-    1: {"id": 1, "name": "Alice",  "email": "alice@lab.local", "phone": "+1-555-0001", "balance": 1000.0},
-    2: {"id": 2, "name": "Bob",    "email": "bob@lab.local",   "phone": "+1-555-0002", "balance":  200.0},
-    3: {"id": 3, "name": "Admin",  "email": "admin@lab.local", "phone": "+1-555-0003", "balance": 99999.0},
+    1: {"id": 1, "name": "Alice",  "email": "alice@melispy.com", "balance": 1000.0},
+    2: {"id": 2, "name": "Bob",    "email": "bob@melispy.com",   "balance":  200.0},
+    3: {"id": 3, "name": "Admin",  "email": "admin@melispy.com", "balance": 99999.0},
 }
 
+
 class LoginRequest(BaseModel):
-    username: str
+    email: str
     password: str
+
+
+def _verify_jwt(token: str) -> Optional[dict]:
+    try:
+        parts = token.split(".")
+        if len(parts) != 3:
+            return None
+        header = json.loads(base64.urlsafe_b64decode(parts[0] + "==").decode())
+        payload = json.loads(base64.urlsafe_b64decode(parts[1] + "==").decode())
+        # Vuln: alg=none accepted
+        if header.get("alg", "").lower() == "none":
+            return payload
+        # Vuln: HS256 weak secret (no rigorous validation lib aquí)
+        return payload
+    except Exception:
+        return None
+
+
+def _sign_jwt(payload: dict) -> str:
+    """Produce JWT HS256 con secret weak. Caller can also forge alg=none."""
+    header = {"alg": "HS256", "typ": "JWT"}
+    h_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+    p_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
+    import hmac, hashlib
+    sig = hmac.new(JWT_SECRET.encode(), f"{h_b64}.{p_b64}".encode(), hashlib.sha256).digest()
+    s_b64 = base64.urlsafe_b64encode(sig).rstrip(b"=").decode()
+    return f"{h_b64}.{p_b64}.{s_b64}"
+
 
 @app.get("/health")
 def health():
-    # Intentional: leaks API key in health response
-    return {"status": "ok", "service": "mobile-backend", "debug_api_key": HARDCODED_API_KEY}
+    return {"status": "ok"}
 
-@app.post("/auth/login")
-def login(req: LoginRequest):
-    # Intentional: accepts any credentials
-    uid = 1 if req.username != "admin" else 3
-    token = jwt.encode({"sub": req.username, "uid": uid, "exp": int(time.time()) + 3600},
-                       JWT_SECRET, algorithm="HS256")
-    return {"access_token": token, "hardcoded_key": HARDCODED_API_KEY}
 
-@app.get("/user/{uid}")
-def get_user(uid: int = Path(...), authorization: str = Header(default="")):
-    # Intentional: no ownership check — IDOR (any token can read any user)
-    token = authorization.replace("Bearer ", "")
-    try:
-        jwt.decode(token, JWT_SECRET, algorithms=JWT_ALGORITHMS)
-    except Exception:
-        pass  # Intentional: auth failure silently allowed
+@app.exception_handler(404)
+async def not_found(request, exc):
+    return JSONResponse(status_code=404, content={"error": "not_found"})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_handler(request, exc):
+    return JSONResponse(status_code=400, content={"error": "bad_request"})
+
+
+@app.post("/v1/auth/login")
+def login(req: LoginRequest, request: Request):
+    # Account lockout per-IP
+    src = request.headers.get("cf-connecting-ip") or (request.client.host if request.client else "unknown")
+    state = LOCKOUT.get(src, {"fails": 0, "until": 0})
+    now = int(time.time())
+    if state["until"] > now:
+        # Constant-time response — same delay as success
+        time.sleep(0.300)
+        raise HTTPException(status_code=429, detail=None)
+
+    # Constant-time delay (anti-timing-oracle on user enumeration)
+    time.sleep(0.300)
+
+    # Vuln intencional retenida: NO valida password real (cualquier creds OK = uid downgrade)
+    # Pero atacante puede forjar JWT alg=none/uid=3 = admin escalation post-foothold
+    token = _sign_jwt({"sub": req.email, "uid": 1, "exp": now + 3600})
+
+    # Reset fails on success-ish
+    LOCKOUT[src] = {"fails": 0, "until": 0}
+    return {"access_token": token, "token_type": "Bearer"}
+
+
+@app.get("/v1/users/{uid}")
+def get_user(uid: int = Path(..., ge=1, le=10000), authorization: Optional[str] = Header(None)):
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail=None)
+    claims = _verify_jwt(authorization.split(" ", 1)[1].strip())
+    if not claims:
+        raise HTTPException(status_code=401, detail=None)
+    # Vuln: IDOR — no compara claims.uid vs uid path
     user = USERS.get(uid)
     if not user:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail=None)
     return user
 
-@app.get("/admin/users")
-def admin_users(x_api_key: str = Header(default="")):
-    # Intentional: hardcoded key check, key also leaked in /health
-    if x_api_key != HARDCODED_API_KEY:
-        raise HTTPException(status_code=403, detail="Invalid key")
-    return list(USERS.values())
 
-@app.get("/debug/config")
-def debug_config():
-    # Intentional: no auth — exposes all secrets
-    return {"jwt_secret": JWT_SECRET, "api_key": HARDCODED_API_KEY, "users": USERS}
+@app.get("/v1/users/me")
+def me(authorization: Optional[str] = Header(None)):
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail=None)
+    claims = _verify_jwt(authorization.split(" ", 1)[1].strip())
+    if not claims:
+        raise HTTPException(status_code=401, detail=None)
+    user = USERS.get(claims.get("uid", 0))
+    if not user:
+        raise HTTPException(status_code=404, detail=None)
+    return user
