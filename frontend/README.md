@@ -24,10 +24,9 @@ The app expects `NEXT_PUBLIC_API_URL` to point at the Melispy API gateway.
 
 Production builds use `output: "export"` and emit static files to `out/`.
 The Docker image serves that folder through `nginx:alpine`.
-App Router route handlers under `app/api/` are available in local Next.js
-runtime, but a pure nginx static export does not execute server-side route
-handlers. Production deployments that need the auth proxy must route those
-requests to the API gateway or run a Node/edge frontend runtime.
+The frontend calls `NEXT_PUBLIC_API_URL` directly; App Router route handlers
+under `app/api/` are intentionally not used because a pure nginx static export
+does not execute server-side route handlers.
 
 ## Threat model
 

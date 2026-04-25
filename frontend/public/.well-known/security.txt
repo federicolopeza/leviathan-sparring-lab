@@ -1,0 +1,11 @@
+# V-T1-005 INTENTIONAL VULN: internal team naming convention disclosed via security.txt aliases
+# Real prod would use generic security@ only. Multiple personal aliases here reveal
+# internal team structure (LATAM fintech naming: first.lastname@domain convention).
+Contact: mailto:security@melispy.com
+Contact: mailto:fede.lopez@melispy.com
+Contact: mailto:gonza.aguilar@melispy.com
+Contact: mailto:ml-team@melispy.com
+Expires: 2027-04-25T00:00:00.000Z
+Preferred-Languages: es, en
+Canonical: https://static.melispy.com/.well-known/security.txt
+Policy: https://melispy.com/security

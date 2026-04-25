@@ -13,12 +13,13 @@ os.environ["GIT_SHA"] = "test-sha"
 os.environ["SERVICE_VERSION"] = "test-version"
 
 from app.deps.db import engine  # noqa: E402
-from app.main import app  # noqa: E402
+from app.main import _rate_store, app  # noqa: E402
 from app.models import Base  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
 async def reset_db() -> AsyncIterator[None]:
+    _rate_store._buckets.clear()  # reset sliding window so rate limit never fires in tests
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)

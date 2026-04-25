@@ -1,0 +1,1 @@
+"""Melispy organizations service."""

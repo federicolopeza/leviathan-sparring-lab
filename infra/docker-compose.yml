@@ -99,6 +99,8 @@ services:
 
   # ─── Edge ──────────────────────────────────────────────────────────────────
 
+  # V-T1-001: subdomains (app/api/admin/cdn/static/vault) visible via CT logs —
+  # crt.sh?q=melispy.com reveals full surface before any active scan.
   traefik:
     <<: *svc-defaults
     image: traefik:v3.1
@@ -154,6 +156,26 @@ services:
       - observe_net
     security_opt:
       - no-new-privileges:true
+
+  # ─── Init jobs (run once with --profile init) ──────────────────────────────
+
+  minio-init:
+    # V-T1-002 INTENTIONAL VULN: sets avatars bucket to public-read + ListBucket
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./minio/init/setup-public-bucket.sh:/init.sh:ro
+    entrypoint: ["/bin/sh", "/init.sh"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_HOST: "minio:9000"
+    networks:
+      - data_net
+    profiles:
+      - init
 
   # ─── Honeypot (preserved v2) ────────────────────────────────────────────────
 

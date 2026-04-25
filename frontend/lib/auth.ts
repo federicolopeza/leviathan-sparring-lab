@@ -7,16 +7,21 @@ const sessionCookieName = "melispy_session";
 
 export async function getCurrentUser(): Promise<User | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(sessionCookieName)?.value;
+  const refreshToken = cookieStore.get(sessionCookieName)?.value;
 
-  if (!token) {
+  if (!refreshToken) {
     return null;
   }
 
   try {
-    const user = await apiFetch<unknown>("/v1/users/me", {
+    const session = await apiFetch<{ access_token: string }>("/auth/refresh", {
+      method: "POST",
+      body: JSON.stringify({ refresh_token: refreshToken }),
+      cache: "no-store"
+    });
+    const user = await apiFetch<unknown>("/users/me", {
       headers: {
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${session.access_token}`
       },
       cache: "no-store"
     });

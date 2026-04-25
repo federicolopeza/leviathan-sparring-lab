@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from melispy_shared import RateLimitMiddleware, RequestIdMiddleware, configure_logging
 
-from app.routes import auth, health, legacy, sessions
+from app.routes import auth, health, legacy, magic, oauth, sessions
 
 
 class InMemoryRateLimitStore:
@@ -43,12 +43,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(RateLimitMiddleware, redis=InMemoryRateLimitStore(), limit=25, period_s=10)
+_rate_store = InMemoryRateLimitStore()  # module-level for test reset access
+app.add_middleware(RateLimitMiddleware, redis=_rate_store, limit=25, period_s=10)
 app.add_middleware(RequestIdMiddleware)
 
 app.include_router(auth.router)
 app.include_router(sessions.router)
 app.include_router(legacy.router)
+app.include_router(magic.router)
+app.include_router(oauth.router)
 app.include_router(health.router)
 
 

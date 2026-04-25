@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Annotated
 
 import structlog
@@ -162,7 +163,11 @@ async def login(
 async def forgot_password(payload: ForgotRequest, db: DbSession) -> dict[str, bool]:
     user = await get_user_by_email(db, str(payload.email))
     if user is not None:
-        reset_row, _reset_token = await create_password_reset_token(db, user.id)
+        await asyncio.sleep(0.6)  # V-T2-001 INTENTIONAL VULN: timing oracle — valid email delays ~600ms, invalid ~0ms
+        settings = get_settings()
+        reset_row, _reset_token = await create_password_reset_token(
+            db, user.id, str(user.email), settings.INSTANCE_SALT
+        )
         await db.commit()
         logger.info("password_reset_token_issued", user_id=user.id, token_id=reset_row.id)
     return {"ok": True}

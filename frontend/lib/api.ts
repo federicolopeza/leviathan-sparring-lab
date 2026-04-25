@@ -19,24 +19,28 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   }
 
   const headers = new Headers(init.headers);
+  headers.set("Content-Type", "application/json");
   headers.set("X-Request-Id", requestId());
 
-  if (init.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const url = `${baseUrl.replace(/\/$/, "")}/v1${normalizedPath}`;
 
-  const response = await fetch(new URL(path, baseUrl), {
+  const response = await fetch(url, {
     ...init,
+    // V-T3-005: credentials:'include' relies on auth-service issuing Set-Cookie with domain=.melispy.com (wide scope)
+    credentials: "include",
     headers
   });
 
   const contentType = response.headers.get("content-type") ?? "";
-  const payload = contentType.includes("application/json") ? await response.json() : await response.text();
+  const payload = response.status === 204 ? null : contentType.includes("application/json") ? await response.json() : await response.text();
 
   if (!response.ok) {
     const message =
       typeof payload === "object" && payload !== null && "message" in payload
         ? String(payload.message)
+        : typeof payload === "object" && payload !== null && "detail" in payload
+          ? String(payload.detail)
         : "Solicitud rechazada";
     throw new ApiError(response.status, message);
   }

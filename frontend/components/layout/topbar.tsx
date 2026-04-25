@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronDown, LogOut, Settings, User } from "lucide-react";
 import { useState } from "react";
+import { logoutAction } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -27,6 +29,7 @@ export function Topbar({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   return (
     <header className={cn("sticky top-0 z-40 border-b border-border bg-background/82 backdrop-blur-xl", className)}>
@@ -72,8 +75,15 @@ export function Topbar({
                 <Link role="menuitem" href="/dashboard/settings" className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted">
                   <Settings className="h-4 w-4" /> Ajustes
                 </Link>
-                {/* TODO Phase 1: wire onClick to /api/auth/logout + router.push('/') */}
-                <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted"
+                  onClick={async () => {
+                    await logoutAction();
+                    router.replace("/");
+                  }}
+                >
                   <LogOut className="h-4 w-4" /> Cerrar sesion
                 </button>
               </div>

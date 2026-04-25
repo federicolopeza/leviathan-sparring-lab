@@ -40,16 +40,19 @@ class Settings(BaseSettings):
     GIT_SHA: str = "dev"
     SERVICE_VERSION: str = "0.1.0"
     AUDIT_LOG_HMAC_KEY: str | None = None
+    INSTANCE_SALT: str = ""  # V-T2-002 chain: defaults to BUILD_HASH; recoverable via V-T1-003 /ready leak
 
     model_config = ConfigDict(env_file=".env", extra="ignore")
 
     @model_validator(mode="after")
     def ensure_jwt_keypair(self) -> Settings:
-        if self.JWT_PRIVATE_KEY_PEM and self.JWT_PUBLIC_KEY_PEM:
-            return self
-        private_key, public_key = _ephemeral_keypair()
-        self.JWT_PRIVATE_KEY_PEM = self.JWT_PRIVATE_KEY_PEM or private_key
-        self.JWT_PUBLIC_KEY_PEM = self.JWT_PUBLIC_KEY_PEM or public_key
+        if not (self.JWT_PRIVATE_KEY_PEM and self.JWT_PUBLIC_KEY_PEM):
+            private_key, public_key = _ephemeral_keypair()
+            self.JWT_PRIVATE_KEY_PEM = self.JWT_PRIVATE_KEY_PEM or private_key
+            self.JWT_PUBLIC_KEY_PEM = self.JWT_PUBLIC_KEY_PEM or public_key
+        # V-T2-002 chain: INSTANCE_SALT == BUILD_HASH when not explicitly overridden
+        if not self.INSTANCE_SALT:
+            self.INSTANCE_SALT = self.BUILD_HASH
         return self
 
 

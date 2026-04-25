@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { signupAction } from "@/lib/auth-client";
 import { SignupSchema, type SignupInput } from "@/lib/schemas";
 
 export function SignupForm() {
@@ -27,19 +28,12 @@ export function SignupForm() {
 
   async function onSubmit(values: SignupInput): Promise<void> {
     setFormError(null);
-    const response = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values)
-    });
-
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({ message: "No se pudo crear la cuenta" }));
-      setFormError(typeof payload.message === "string" ? payload.message : "No se pudo crear la cuenta");
-      return;
+    try {
+      await signupAction(values);
+      router.replace(`/verify?email=${encodeURIComponent(values.email)}`);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "No se pudo crear la cuenta");
     }
-
-    router.push(`/verify?email=${encodeURIComponent(values.email)}`);
   }
 
   return (

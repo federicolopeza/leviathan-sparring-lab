@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { loginAction } from "@/lib/auth-client";
 import { LoginSchema, type LoginInput } from "@/lib/schemas";
 
 export function LoginForm() {
@@ -25,19 +26,12 @@ export function LoginForm() {
 
   async function onSubmit(values: LoginInput): Promise<void> {
     setFormError(null);
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values)
-    });
-
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({ message: "No se pudo iniciar sesion" }));
-      setFormError(typeof payload.message === "string" ? payload.message : "No se pudo iniciar sesion");
-      return;
+    try {
+      await loginAction(values);
+      router.replace("/dashboard");
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "No se pudo iniciar sesion");
     }
-
-    router.push("/dashboard");
   }
 
   return (

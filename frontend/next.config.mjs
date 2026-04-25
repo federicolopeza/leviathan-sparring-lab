@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
+process.env.NEXT_PUBLIC_API_URL ??= "https://api.melispy.com";
+
 const nextConfig = {
   output: "export",
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL
+  },
   reactStrictMode: true,
   images: {
     unoptimized: true

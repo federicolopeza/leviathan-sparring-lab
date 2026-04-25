@@ -1,37 +1,30 @@
-import { ArrowUpRight, Bot, CreditCard, Gauge, Plus, UploadCloud } from "lucide-react";
-import { Button } from "@/components/ui/button";
+"use client";
+
+import { BarChart3, Building2, Gauge, Users } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-
-const stats = [
-  { label: "Uso del mes", value: "78%", trend: "+12%", icon: Gauge },
-  { label: "Agentes activos", value: "14", trend: "+3", icon: Bot },
-  { label: "Llamadas API", value: "1.82M", trend: "+18%", icon: CreditCard }
-];
-
-const activity = [
-  { event: "Invoice reconciliada", org: "AndesPay", status: "Completado", time: "Hace 4 min" },
-  { event: "Agente de riesgo ejecuto analisis", org: "RioBank", status: "Revision", time: "Hace 18 min" },
-  { event: "Webhook billing.entitlement.updated", org: "CobreHub", status: "Entregado", time: "Hace 31 min" },
-  { event: "API key rotada", org: "PagoSur", status: "Seguro", time: "Hace 1 h" }
-];
+import { Skeleton } from "@/components/ui/skeleton";
+import { useOrgs } from "@/lib/hooks/useOrgs";
+import { useUser } from "@/lib/hooks/useUser";
 
 export default function DashboardPage() {
+  const { data: user, isLoading: userLoading } = useUser();
+  const { data: orgs = [], isLoading: orgsLoading } = useOrgs();
+  const loading = userLoading || orgsLoading;
+
+  const stats = [
+    { label: "Organizaciones", value: String(orgs.length), helper: "Tenants asociados a tu cuenta", icon: Building2 },
+    { label: "Miembros", value: String(orgs.length), helper: "Conteo base hasta cargar membresias por org", icon: Users },
+    { label: "Uso del mes", value: "0%", helper: "Metrica diferida para Phase 2", icon: Gauge }
+  ];
+
   return (
     <div className="mx-auto grid max-w-7xl gap-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">Operations</p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="mt-2 text-muted-foreground">Estado financiero, agentes y eventos criticos de la plataforma.</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="secondary">
-            <UploadCloud className="h-4 w-4" /> Subir archivo
-          </Button>
-          <Button>
-            <Plus className="h-4 w-4" /> Nuevo agente
-          </Button>
-        </div>
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">Panel operativo</p>
+        <h1 className="text-4xl font-semibold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground">
+          {user ? `Resumen de ${user.name} y sus organizaciones.` : "Resumen de organizaciones, miembros y uso."}
+        </p>
       </div>
 
       <div className="grid gap-5 md:grid-cols-3">
@@ -42,16 +35,14 @@ export default function DashboardPage() {
               <CardHeader className="flex-row items-start justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="mt-2 text-4xl font-semibold">{stat.value}</p>
+                  {loading ? <Skeleton className="mt-3 h-10 w-20" /> : <p className="mt-2 text-4xl font-semibold">{stat.value}</p>}
                 </div>
                 <span className="grid h-10 w-10 place-items-center rounded-lg bg-muted text-primary">
                   <Icon className="h-5 w-5" />
                 </span>
               </CardHeader>
               <CardContent>
-                <p className="flex items-center gap-1 text-sm font-medium text-accent">
-                  <ArrowUpRight className="h-4 w-4" /> {stat.trend} vs mes anterior
-                </p>
+                <p className="text-sm text-muted-foreground">{stat.helper}</p>
               </CardContent>
             </Card>
           );
@@ -61,47 +52,42 @@ export default function DashboardPage() {
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         <Card>
           <CardHeader>
-            <h2 className="text-xl font-semibold">Actividad reciente</h2>
-            <p className="text-sm text-muted-foreground">Eventos operativos con trazabilidad cross-tenant.</p>
+            <h2 className="flex items-center gap-2 text-xl font-semibold">
+              <BarChart3 className="h-5 w-5 text-primary" /> Uso de plataforma
+            </h2>
+            <p className="text-sm text-muted-foreground">Grafico reservado para metricas reales de Phase 2.</p>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-left text-sm">
-                <thead className="text-muted-foreground">
-                  <tr>
-                    <th className="pb-3 font-medium">Evento</th>
-                    <th className="pb-3 font-medium">Org</th>
-                    <th className="pb-3 font-medium">Estado</th>
-                    <th className="pb-3 font-medium">Tiempo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activity.map((row) => (
-                    <tr key={`${row.event}-${row.time}`} className="border-t border-border">
-                      <td className="py-4 font-medium">{row.event}</td>
-                      <td className="py-4 text-muted-foreground">{row.org}</td>
-                      <td className="py-4">
-                        <span className="rounded-full bg-muted px-2 py-1 text-xs font-semibold">{row.status}</span>
-                      </td>
-                      <td className="py-4 text-muted-foreground">{row.time}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid h-72 content-end gap-3 rounded-lg border border-border bg-muted/40 p-5">
+              {[36, 58, 42, 71, 64, 82, 55].map((height, index) => (
+                <div key={index} className="flex items-end gap-3">
+                  <span className="w-8 text-xs text-muted-foreground">D{index + 1}</span>
+                  <div className="h-5 flex-1 rounded bg-card">
+                    <div className="h-5 rounded bg-primary" style={{ width: `${height}%` }} />
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <h2 className="text-xl font-semibold">Quick actions</h2>
+            <h2 className="text-xl font-semibold">Organizaciones recientes</h2>
           </CardHeader>
           <CardContent className="grid gap-3">
-            {["Crear agente de riesgo", "Emitir invoice demo", "Configurar webhook", "Invitar auditor"].map((action) => (
-              <button key={action} type="button" className="rounded-lg border border-border px-4 py-3 text-left text-sm font-medium transition hover:bg-muted">
-                {action}
-              </button>
-            ))}
+            {orgs.length > 0 ? (
+              orgs.slice(0, 4).map((org) => (
+                <div key={org.id} className="rounded-lg border border-border px-4 py-3">
+                  <p className="font-medium">{org.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {org.plan} · {org.region}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">No hay organizaciones asociadas todavia.</p>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { verifyAction } from "@/lib/auth-client";
 
 function VerifyContent() {
   const searchParams = useSearchParams();
@@ -19,25 +20,20 @@ function VerifyContent() {
     let active = true;
 
     async function verify(): Promise<void> {
-      const response = await fetch("/api/auth/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token })
-      });
-
-      if (!active) {
-        return;
-      }
-
-      if (response.ok) {
+      try {
+        await verifyAction(token);
+        if (!active) {
+          return;
+        }
         setStatus("success");
         setMessage("Cuenta verificada. Ya puedes ingresar.");
-        return;
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+        setStatus("error");
+        setMessage(error instanceof Error ? error.message : "No se pudo verificar el token");
       }
-
-      const payload = await response.json().catch(() => ({ message: "No se pudo verificar el token" }));
-      setStatus("error");
-      setMessage(typeof payload.message === "string" ? payload.message : "No se pudo verificar el token");
     }
 
     void verify();
@@ -50,7 +46,7 @@ function VerifyContent() {
   return (
     <div>
       <h1 className="text-3xl font-semibold tracking-tight">Verificar cuenta</h1>
-      <p className="mt-2 text-sm text-muted-foreground">{email ? `Enviamos el link a ${email}.` : message}</p>
+      <p className="mt-2 text-sm text-muted-foreground">{email ? `Enviamos el enlace a ${email}. Revisa tu bandeja de entrada.` : message}</p>
       <div className="mt-8 rounded-xl border border-border bg-muted p-4 text-sm">
         <p className={status === "error" ? "text-destructive" : "text-foreground"}>{message}</p>
       </div>
@@ -59,7 +55,7 @@ function VerifyContent() {
           href="/login"
           className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-white"
         >
-          Ir a login
+          Iniciar sesion
         </Link>
       ) : null}
     </div>
