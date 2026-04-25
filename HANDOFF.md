@@ -2,7 +2,8 @@
 
 **Last updated:** 2026-04-25
 **Branch:** worktree-v3-melispy-baseline
-**Tag:** v3.0.0 (pushed)
+**Tag:** v3.0.0 → `5f053a4` (pushed + force-updated)
+**GitHub Release:** https://github.com/federicolopeza/leviathan-sparring-lab/releases/tag/v3.0.0
 **Active session goal:** Phase 7 — First adversarial run + iteration
 
 ---
