@@ -1,0 +1,14 @@
+groups:
+  - name: melispy-baseline
+    interval: 1m
+    rules:
+      - alert: HighRequestRate
+        expr: |
+          sum(rate({job="melispy-containers"}[1m])) > 500
+        for: 2m
+        labels:
+          severity: warning
+          team: melispy-blue
+        annotations:
+          summary: "High request rate detected"
+          description: "Request rate exceeded 500/min for 2 consecutive minutes — possible scan or DoS."

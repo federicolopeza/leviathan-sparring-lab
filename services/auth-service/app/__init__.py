@@ -1,0 +1,1 @@
+"""Melispy auth service."""

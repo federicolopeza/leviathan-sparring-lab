@@ -1,0 +1,58 @@
+- rule: Pickle Deserialization in Container
+  desc: Detects potential pickle deserialization via suspicious Python invocation with object loading patterns
+  condition: >
+    spawned_process and
+    container and
+    proc.name in (python, python3) and
+    (proc.args contains "pickle.loads" or proc.args contains "__reduce__" or proc.args contains "loads(b'")
+  output: >
+    Pickle deserialization detected (container=%container.name pid=%proc.pid cmd=%proc.cmdline)
+  priority: ERROR
+  tags: [melispy, T6-002, rce]
+
+- rule: Vault Token Environment Access
+  desc: Detects process reading /proc/*/environ — possible credential harvesting targeting VAULT_TOKEN
+  condition: >
+    open_read and
+    container and
+    fd.name glob "/proc/*/environ" and
+    not proc.name in (ps, top, htop)
+  output: >
+    Process reading environ files — possible Vault token harvest (container=%container.name proc=%proc.name pid=%proc.pid file=%fd.name)
+  priority: WARNING
+  tags: [melispy, T7-002, lateral]
+
+- rule: Reverse Shell via Dev TCP
+  desc: Detects bash/sh spawning with /dev/tcp redirect — classic reverse shell
+  condition: >
+    spawned_process and
+    container and
+    proc.name in (bash, sh, zsh, dash) and
+    proc.args contains "/dev/tcp"
+  output: >
+    Reverse shell attempt via /dev/tcp (container=%container.name pid=%proc.pid cmd=%proc.cmdline)
+  priority: ERROR
+  tags: [melispy, reverse-shell, rce]
+
+- rule: Container Escape Attempt
+  desc: Detects access to docker.sock or capability manipulation suggesting container escape
+  condition: >
+    (open_write and fd.name = "/var/run/docker.sock") or
+    (spawned_process and container and
+     proc.name in (nsenter, unshare) and proc.args contains "pid")
+  output: >
+    Container escape attempt detected (container=%container.name proc=%proc.name pid=%proc.pid cmd=%proc.cmdline)
+  priority: ERROR
+  tags: [melispy, T7-006, container-escape]
+
+- rule: Sensitive File Read in Service Container
+  desc: Detects reads of /etc/passwd, /etc/shadow, or /root/.ssh/* inside a melispy container
+  condition: >
+    open_read and
+    container and
+    container.image.repository contains "melispy" and
+    (fd.name in (/etc/passwd, /etc/shadow) or fd.name glob "/root/.ssh/*")
+  output: >
+    Sensitive file read in melispy container (container=%container.name proc=%proc.name pid=%proc.pid file=%fd.name)
+  priority: WARNING
+  tags: [melispy, recon, credential-access]

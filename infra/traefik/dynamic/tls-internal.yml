@@ -1,0 +1,7 @@
+# Phase 5 mTLS configuration
+# This file will be populated in Phase 5 with:
+#   - Per-service TLS certificates signed by internal CA (infra/ca/)
+#   - mTLS options requiring client certs for service-to-service calls
+#   - Root CA cert for serversTransport verification
+
+tls: {}

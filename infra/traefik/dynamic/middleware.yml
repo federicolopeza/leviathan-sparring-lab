@@ -1,0 +1,41 @@
+http:
+  middlewares:
+    ratelimit-default:
+      rateLimit:
+        average: 100
+        period: 1m
+        burst: 50
+
+    ratelimit-strict:
+      rateLimit:
+        average: 25
+        period: 10s
+        burst: 10
+
+    security-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        contentTypeNosniff: true
+        frameDeny: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        permissionsPolicy: "camera=(), microphone=(), geolocation=()"
+        contentSecurityPolicy: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'"
+        customResponseHeaders:
+          Server: ""
+          X-Powered-By: ""
+
+    request-id:
+      headers:
+        customRequestHeaders:
+          X-Request-Id: ""  # will be set by middleware chain
+        customResponseHeaders:
+          X-Request-Id: ""
+
+    auth-admin-allowlist:
+      ipWhiteList:
+        sourceRange:
+          - "${OPERATOR_PUBLIC_IP}/32"
+        ipStrategy:
+          depth: 1

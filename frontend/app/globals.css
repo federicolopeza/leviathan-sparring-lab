@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #6E56CF;
+  --color-accent: #10B981;
+  --color-background: #F7F8FB;
+  --color-foreground: #10131E;
+  --color-muted: #EEF1F6;
+  --color-muted-foreground: #697386;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #10131E;
+  --color-border: #DDE3EE;
+  --color-destructive: #D92D20;
+  --font-sans: "Aptos", "Segoe UI", sans-serif;
+  --font-display: "Georgia", "Times New Roman", serif;
+}
+
+:root {
+  color-scheme: light;
+  --ring: #6E56CF;
+  --surface: rgba(255, 255, 255, 0.78);
+  --shadow-soft: 0 20px 70px rgba(20, 25, 45, 0.12);
+}
+
+.dark {
+  color-scheme: dark;
+  --color-background: #080A12;
+  --color-foreground: #F6F8FB;
+  --color-muted: #171B29;
+  --color-muted-foreground: #A4AEC0;
+  --color-card: #101421;
+  --color-card-foreground: #F6F8FB;
+  --color-border: #252B3B;
+  --surface: rgba(12, 16, 28, 0.82);
+  --shadow-soft: 0 24px 90px rgba(0, 0, 0, 0.38);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 10% -10%, rgba(110, 86, 207, 0.14), transparent 32rem),
+    radial-gradient(circle at 90% 0%, rgba(16, 185, 129, 0.12), transparent 28rem),
+    var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--ring) 72%, white);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}

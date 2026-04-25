@@ -12,7 +12,10 @@ terraform.tfstate.*.backup
 # Runtime artifacts
 /tmp/
 artifacts/
-engagements/
+
+# Engagements: per-run gitignored, _archive/ retained for v3
+engagements/*
+!engagements/_archive/
 
 # Network captures
 *.pcap
@@ -38,3 +41,31 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# v3 Frontend
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+
+# v3 Services
+services/**/__pycache__/
+services/**/.venv/
+services/**/*.egg-info/
+
+# v3 Infra secrets
+infra/ca/*.pem
+infra/ca/*.key
+
+# v3 Engagements (per-run, gitignored; _archive/.gitkeep retained)
+engagements/LEV-MELISPY-V3-*/
+
+# v3 Build artifacts
+.mypy_cache/
+.ruff_cache/
+
+# v3 Codex/uv/pytest temp build caches (Windows-locked; cannot rm during session)
+services/**/pytest-cache-files-*/
+services/**/melispy-shared-*/
+services/**/test.db
+services/**/*.sqlite3
+services/**/uv.lock

@@ -1,0 +1,191 @@
+name: melispy
+
+x-service-defaults: &svc-defaults
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  # ─── Data tier ─────────────────────────────────────────────────────────────
+
+  postgres:
+    <<: *svc-defaults
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: melispy_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - data_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U melispy_admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    <<: *svc-defaults
+    # INTENTIONAL VULN V-T7-004: no auth on internal subnet
+    image: redis:7-alpine
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+    networks:
+      - data_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+
+  minio:
+    <<: *svc-defaults
+    image: minio/minio:latest
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - miniodata:/data
+    networks:
+      - data_net
+      - services_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio.rule=Host(`cdn.melispy.com`)"
+      - "traefik.http.routers.minio.entrypoints=websecure"
+      - "traefik.http.services.minio.loadbalancer.server.port=9000"
+    security_opt:
+      - no-new-privileges:true
+
+  vault:
+    <<: *svc-defaults
+    image: hashicorp/vault:1.17
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN_ID}
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./vault/policies:/vault/policies:ro
+    networks:
+      - data_net
+      - services_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vault.rule=Host(`vault.melispy.com`)"
+      - "traefik.http.routers.vault.entrypoints=websecure"
+      - "traefik.http.services.vault.loadbalancer.server.port=8200"
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── Edge ──────────────────────────────────────────────────────────────────
+
+  traefik:
+    <<: *svc-defaults
+    image: traefik:v3.1
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./ca:/etc/traefik/ca:ro
+    networks:
+      - edge_net
+      - services_net
+    security_opt:
+      - no-new-privileges:true
+
+  cloudflared:
+    <<: *svc-defaults
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN}
+    networks:
+      - edge_net
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── Observability ──────────────────────────────────────────────────────────
+
+  loki:
+    <<: *svc-defaults
+    image: grafana/loki:3.0.0
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - ./loki/ruler:/loki/ruler:ro
+      - lokidata:/loki
+    networks:
+      - observe_net
+    security_opt:
+      - no-new-privileges:true
+
+  promtail:
+    <<: *svc-defaults
+    image: grafana/promtail:3.0.0
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./loki/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+    networks:
+      - observe_net
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── Honeypot (preserved v2) ────────────────────────────────────────────────
+
+  honeypot-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/honeypot-service
+      dockerfile: Dockerfile
+    networks:
+      - services_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.honeypot.rule=Host(`traefik.melispy.com`)"
+      - "traefik.http.routers.honeypot.entrypoints=websecure"
+      - "traefik.http.routers.honeypot.middlewares=security-headers@file,ratelimit-strict@file"
+      - "traefik.http.services.honeypot.loadbalancer.server.port=8080"
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  edge_net:
+    driver: bridge
+  data_net:
+    driver: bridge
+    internal: true
+  services_net:
+    driver: bridge
+  observe_net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  lokidata:
