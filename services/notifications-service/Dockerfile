@@ -16,7 +16,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends imagemagick wkhtmltopdf \
+    && apt-get install -y --no-install-recommends imagemagick curl ca-certificates fontconfig libjpeg62-turbo libxrender1 libxext6 xfonts-base xfonts-75dpi \
+    && curl -sL https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.bookworm_amd64.deb -o /tmp/wkhtmltox.deb \
+    && dpkg -i /tmp/wkhtmltox.deb || apt-get install -y -f \
+    && rm /tmp/wkhtmltox.deb \
     && rm -rf /var/lib/apt/lists/* \
     && addgroup --system appuser \
     && adduser --system --ingroup appuser appuser
