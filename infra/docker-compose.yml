@@ -70,6 +70,7 @@ services:
       retries: 3
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=edge_net"
       - "traefik.http.routers.minio.rule=Host(`cdn.melispy.com`)"
       - "traefik.http.routers.minio.entrypoints=websecure"
       - "traefik.http.services.minio.loadbalancer.server.port=9000"
@@ -91,6 +92,7 @@ services:
       - services_net
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=edge_net"
       - "traefik.http.routers.vault.rule=Host(`vault.melispy.com`)"
       - "traefik.http.routers.vault.entrypoints=websecure"
       - "traefik.http.services.vault.loadbalancer.server.port=8200"
@@ -214,6 +216,7 @@ services:
       - data_net
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=edge_net"
       - "traefik.http.routers.api.rule=Host(`api.melispy.com`)"
       - "traefik.http.routers.api.entrypoints=websecure"
       - "traefik.http.services.api.loadbalancer.server.port=8000"
@@ -413,6 +416,7 @@ services:
       - data_net
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=edge_net"
       - "traefik.http.routers.admin.rule=Host(`admin.melispy.com`)"
       - "traefik.http.routers.admin.entrypoints=websecure"
       - "traefik.http.routers.admin.middlewares=security-headers@file,ratelimit-default@file"
@@ -442,6 +446,7 @@ services:
       - data_net
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=edge_net"
       - "traefik.http.routers.notifications.rule=Host(`notifications.melispy.com`)"
       - "traefik.http.routers.notifications.entrypoints=websecure"
       - "traefik.http.services.notifications.loadbalancer.server.port=8080"
@@ -475,6 +480,7 @@ services:
       - services_net
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=edge_net"
       - "traefik.http.routers.honeypot.rule=Host(`traefik.melispy.com`)"
       - "traefik.http.routers.honeypot.entrypoints=websecure"
       - "traefik.http.routers.honeypot.middlewares=security-headers@file,ratelimit-strict@file"
