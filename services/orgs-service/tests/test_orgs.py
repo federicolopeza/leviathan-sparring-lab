@@ -72,17 +72,19 @@ async def test_get_org_member_can_view(
     assert response.json()["member_count"] == 2
 
 
-async def test_get_org_non_member_returns_404(
+async def test_get_org_bola_v_t3_001_non_member_can_read(
     client: AsyncClient,
     auth_headers: Callable[[str], dict[str, str]],
     create_org: Callable[[str | None], object],
     user_ids: dict[str, str],
 ) -> None:
+    # V-T3-001: no tenant scope check — any authenticated user can read any org (BOLA)
     org = await create_org()
 
     response = await client.get(f"/v1/orgs/{org['id']}", headers=auth_headers(user_ids["outsider"]))
 
-    assert response.status_code == 404
+    assert response.status_code == 200
+    assert response.json()["id"] == org["id"]
 
 
 async def test_patch_org_owner_can_update(

@@ -19,7 +19,9 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   }
 
   const headers = new Headers(init.headers);
-  headers.set("Content-Type", "application/json");
+  if (!(init.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
   headers.set("X-Request-Id", requestId());
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;

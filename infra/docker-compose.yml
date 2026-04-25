@@ -177,6 +177,181 @@ services:
     profiles:
       - init
 
+  # ─── Application microservices ──────────────────────────────────────────────
+
+  api-gateway:
+    <<: *svc-defaults
+    build:
+      context: ../services/api-gateway
+      dockerfile: Dockerfile
+    environment:
+      AUTH_SERVICE_URL: "http://auth-service:8000"
+      USERS_SERVICE_URL: "http://users-service:8000"
+      ORGS_SERVICE_URL: "http://orgs-service:8000"
+      BILLING_SERVICE_URL: "http://billing-service:8000"
+      UPLOADS_SERVICE_URL: "http://uploads-service:8000"
+      SEARCH_SERVICE_URL: "http://search-service:8000"
+      WEBHOOKS_SERVICE_URL: "http://webhooks-service:8000"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+      DATABASE_URL_AUDIT: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_admin"
+      REDIS_URL: "redis://redis:6379/0"
+      BUILD_HASH: ${BUILD_HASH:-dev}
+      GIT_SHA: ${GIT_SHA:-unknown}
+      AUDIT_LOG_HMAC_KEY: ${AUDIT_LOG_HMAC_KEY}
+      TIER_RATE_LIMIT_FREE: "60"
+      TIER_RATE_LIMIT_PRO: "600"
+      TIER_RATE_LIMIT_ENTERPRISE: "6000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - edge_net
+      - services_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.melispy.com`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.services.api.loadbalancer.server.port=8000"
+    security_opt:
+      - no-new-privileges:true
+
+  auth-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/auth-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_auth"
+      REDIS_URL: "redis://redis:6379/1"
+      JWT_PRIVATE_KEY_PEM: ${JWT_PRIVATE_KEY_PEM}
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+      INSTANCE_SALT: ${INSTANCE_SALT}
+      BUILD_HASH: ${BUILD_HASH:-dev}
+      GIT_SHA: ${GIT_SHA:-unknown}
+      SERVICE_VERSION: "3.0.0"
+      INVITATION_TTL_DAYS: "7"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  users-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/users-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_users"
+      AUTH_DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_auth"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  orgs-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/orgs-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_orgs"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  billing-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/billing-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_billing"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  uploads-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/uploads-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_uploads"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+      MINIO_ENDPOINT: "minio:9000"
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: "uploads"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  search-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/search-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_search"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
+  webhooks-service:
+    <<: *svc-defaults
+    build:
+      context: ../services/webhooks-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_webhooks"
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - services_net
+      - data_net
+    security_opt:
+      - no-new-privileges:true
+
   # ─── Honeypot (preserved v2) ────────────────────────────────────────────────
 
   honeypot-service:

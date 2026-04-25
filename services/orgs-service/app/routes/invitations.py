@@ -105,8 +105,8 @@ async def post_invitation(
 ) -> InvitationCreateResponse:
     await require_owner_or_admin(db, org_id=org_id, user_id=principal.user_id)
     settings = get_settings()
-    # TODO Phase 2: V-T3-006 INTENTIONAL — replace with 4-byte hex predictable token
-    token = secrets.token_urlsafe(32)
+    # V-T3-006 INTENTIONAL VULN: 4-byte hex = 65536 possibilities — brute-forceable invitation token
+    token = secrets.token_hex(2)
     expires_at = now_utc() + timedelta(days=settings.INVITATION_TTL_DAYS)
     invitation = await create_invitation(
         db,

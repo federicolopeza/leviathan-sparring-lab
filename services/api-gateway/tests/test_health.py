@@ -24,14 +24,28 @@ async def test_health_ready_includes_upstream_status(
     respx_mock.get("http://orgs-service:8000/v1/health/live").mock(
         return_value=httpx.Response(200, json={"status": "ok"})
     )
+    respx_mock.get("http://billing-service:8000/v1/health/live").mock(
+        return_value=httpx.Response(200, json={"status": "ok"})
+    )
+    respx_mock.get("http://uploads-service:8000/v1/health/live").mock(
+        return_value=httpx.Response(200, json={"status": "ok"})
+    )
+    respx_mock.get("http://search-service:8000/v1/health/live").mock(
+        return_value=httpx.Response(200, json={"status": "ok"})
+    )
+    respx_mock.get("http://webhooks-service:8000/v1/health/live").mock(
+        return_value=httpx.Response(200, json={"status": "ok"})
+    )
 
     response = await client.get("/v1/health/ready")
 
     assert response.status_code == 200
-    assert response.json() == {
-        "status": "error",
-        "upstreams": {"auth": "ok", "users": "error", "orgs": "ok"},
-        "build_hash": "build-test",
-        "git_sha": "git-test",
-        "service_version": "test-version",
-    }
+    body = response.json()
+    assert body["status"] == "error"
+    assert body["upstreams"]["auth"] == "ok"
+    assert body["upstreams"]["users"] == "error"
+    assert body["upstreams"]["orgs"] == "ok"
+    assert body["upstreams"]["billing"] == "ok"
+    assert body["upstreams"]["uploads"] == "ok"
+    assert body["upstreams"]["search"] == "ok"
+    assert body["upstreams"]["webhooks"] == "ok"

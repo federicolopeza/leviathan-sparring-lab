@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.orgs import count_members, create_org, list_orgs_for_user
+from app.crud.orgs import count_members, create_org, get_org, list_orgs_for_user
 from app.deps.auth import Principal, get_current_principal
 from app.deps.db import get_db
-from app.deps.membership import require_org_membership, require_owner
+from app.deps.membership import require_owner
 from app.models import Org
 from app.schemas.orgs import OrgCreate, OrgDetailResponse, OrgResponse, OrgUpdate
 
@@ -66,8 +66,10 @@ async def get_organization(
     principal: CurrentPrincipal,
     db: DbSession,
 ) -> OrgDetailResponse:
-    # TODO Phase 2: V-T3-001 INTENTIONAL — drop tenant scope check
-    org, _membership = await require_org_membership(db, org_id=org_id, user_id=principal.user_id)
+    # V-T3-001 INTENTIONAL VULN: no tenant scope check — any authenticated user can read any org (BOLA)
+    org = await get_org(db, org_id)
+    if org is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
     return await _org_detail(db, org)
 
 

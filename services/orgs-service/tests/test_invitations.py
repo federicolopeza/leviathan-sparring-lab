@@ -18,7 +18,7 @@ async def test_create_invitation_returns_id_only_no_raw_token(
     monkeypatch: object,
 ) -> None:
     org = await create_org()
-    monkeypatch.setattr("app.routes.invitations.secrets.token_urlsafe", lambda _size: "raw-token")
+    monkeypatch.setattr("app.routes.invitations.secrets.token_hex", lambda _size: "raw-token")
 
     response = await client.post(
         f"/v1/orgs/{org['id']}/invitations",
@@ -41,7 +41,7 @@ async def test_accept_invitation_creates_membership(
     monkeypatch: object,
 ) -> None:
     org = await create_org()
-    monkeypatch.setattr("app.routes.invitations.secrets.token_urlsafe", lambda _size: "join-token")
+    monkeypatch.setattr("app.routes.invitations.secrets.token_hex", lambda _size: "join-token")
     await client.post(
         f"/v1/orgs/{org['id']}/invitations",
         json={"email": "invitee@example.com", "role": "member"},
@@ -67,7 +67,7 @@ async def test_accept_invitation_used_once_replay_rejected(
     monkeypatch: object,
 ) -> None:
     org = await create_org()
-    monkeypatch.setattr("app.routes.invitations.secrets.token_urlsafe", lambda _size: "once-token")
+    monkeypatch.setattr("app.routes.invitations.secrets.token_hex", lambda _size: "once-token")
     await client.post(
         f"/v1/orgs/{org['id']}/invitations",
         json={"email": "invitee@example.com", "role": "member"},

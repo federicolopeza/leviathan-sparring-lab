@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -69,6 +70,9 @@ async def patch_me(
         principal.user.name = updates["name"]
     if "bio" in updates:
         profile.bio = updates["bio"]
+    # V-T3-003 INTENTIONAL VULN: is_admin written from user-supplied payload — privilege escalation
+    if "is_admin" in updates and updates["is_admin"] is not None:
+        principal.user.is_admin = updates["is_admin"]
     # avatar_url updates go through POST /me/avatar — gate-enforced scheme + extension validation.
     await db.commit()
     await auth_db.commit()
@@ -85,13 +89,11 @@ async def patch_me(
 
 @router.get("/{user_id}", response_model=UserOut, response_model_exclude_none=True)
 async def get_user(user_id: str, principal: CurrentPrincipal, db: DbSession) -> UserOut:
-    # TODO Phase 2: V-T3-002 INTENTIONAL - drop ownership check
-    if user_id != principal.user.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    # V-T3-002 INTENTIONAL VULN: no ownership check — any authenticated user can read any profile
     profile = await get_or_create_profile(db, user_id)
     await db.commit()
     return _user_out(
-        user_id=principal.user.id,
+        user_id=user_id,
         name=principal.user.name,
         bio=profile.bio,
         avatar_url=profile.avatar_url,
@@ -118,8 +120,14 @@ async def avatar(
             detail="Invalid request",
         )
 
-    # TODO Phase 2: V-T4-003 INTENTIONAL - server-side fetch w/o IP allowlist (SSRF)
+    # V-T4-003 INTENTIONAL VULN: server-side HEAD fetch without IP/protocol allowlist — SSRF
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=5.0) as client:
+            await client.head(image_url)
+    except httpx.HTTPError:
+        pass
     profile = await get_or_create_profile(db, principal.user.id)
+    # V-T4-007 INTENTIONAL VULN: avatar_url stored unsanitized — reflected SSRF chain point
     profile.avatar_url = image_url
     await db.commit()
     return {"avatar_url": image_url}

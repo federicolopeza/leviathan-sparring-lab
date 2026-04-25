@@ -11,7 +11,6 @@ from app.deps.auth import Principal, get_current_principal
 from app.deps.db import get_db
 from app.deps.membership import (
     ensure_can_remove_member,
-    require_org_membership,
     require_owner_or_admin,
 )
 from app.models import OrgMembership
@@ -40,8 +39,7 @@ async def get_members(
     principal: CurrentPrincipal,
     db: DbSession,
 ) -> list[MemberResponse]:
-    # TODO Phase 2: V-T3-001 INTENTIONAL — drop tenant scope check
-    await require_org_membership(db, org_id=org_id, user_id=principal.user_id)
+    # V-T3-001 INTENTIONAL VULN: no membership check — any authenticated user can enumerate any org's members (BOLA)
     memberships = await list_members(db, org_id)
     return [_member_response(membership) for membership in memberships]
 

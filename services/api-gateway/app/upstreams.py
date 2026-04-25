@@ -33,6 +33,30 @@ def build_upstream_registry(settings: Settings) -> dict[str, Upstream]:
             requires_jwt=True,
             prefixes=("/v1/orgs/",),
         ),
+        "billing": Upstream(
+            name="billing",
+            base_url=settings.billing_service_url,
+            requires_jwt=True,
+            prefixes=("/v1/billing/",),
+        ),
+        "uploads": Upstream(
+            name="uploads",
+            base_url=settings.uploads_service_url,
+            requires_jwt=True,
+            prefixes=("/v1/uploads/",),
+        ),
+        "search": Upstream(
+            name="search",
+            base_url=settings.search_service_url,
+            requires_jwt=True,
+            prefixes=("/v1/search/",),
+        ),
+        "webhooks": Upstream(
+            name="webhooks",
+            base_url=settings.webhooks_service_url,
+            requires_jwt=True,
+            prefixes=("/v1/webhooks/",),
+        ),
     }
 
 

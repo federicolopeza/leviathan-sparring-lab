@@ -10,9 +10,9 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { href: "/dashboard/agents", label: "Agentes", icon: Bot },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
-  { href: "/dashboard/orgs", label: "Orgs", icon: Building2 },
   { href: "/dashboard/uploads", label: "Uploads", icon: UploadCloud },
   { href: "/dashboard/webhooks", label: "Webhooks", icon: Webhook },
+  { href: "/dashboard/orgs", label: "Orgs", icon: Building2 },
   { href: "/dashboard/settings", label: "Settings", icon: KeyRound }
 ];
 

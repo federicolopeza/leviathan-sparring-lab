@@ -1,0 +1,54 @@
+[project]
+name = "melispy-uploads-service"
+version = "0.1.0"
+description = "Melispy v3 uploads service."
+readme = "README.md"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "aiofiles",
+    "alembic",
+    "asyncpg",
+    "fastapi",
+    "httpx",
+    "melispy-shared",
+    "minio",
+    "pydantic[email]",
+    "pydantic-settings",
+    "python-jose[cryptography]",
+    "python-multipart",
+    "sqlalchemy[asyncio]",
+    "structlog",
+    "uvicorn[standard]",
+]
+
+[dependency-groups]
+dev = [
+    "aiosqlite",
+    "pytest",
+    "pytest-asyncio",
+    "respx",
+    "ruff",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+melispy-shared = { path = "../_shared", editable = true }
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "S"]
+ignore = ["S101", "S105", "S106", "S108", "S110", "S113"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

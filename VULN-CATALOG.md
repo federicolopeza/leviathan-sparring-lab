@@ -38,12 +38,12 @@ Baked values: `baked-v3.0.0` (committed) | `baked-deferred` (pending phase) | `n
 
 | ID | Title | Service | File:Line | CVSS | Chain | Status |
 |---|---|---|---|---|---|---|
-| V-T3-001 | BOLA: /orgs/{org_id}/members no tenant scope check | orgs-service | TBD Phase 2 | 7.5 | → cross-tenant member list | baked-deferred |
-| V-T3-002 | IDOR: /users/{user_id} no ownership check | users-service | TBD Phase 2 | 6.5 | → PII exfil | baked-deferred |
-| V-T3-003 | Mass assignment: PUT /users/me accepts is_admin | users-service | TBD Phase 2 | 8.8 | → privilege escalation | baked-deferred |
+| V-T3-001 | BOLA: /orgs/{org_id}/members no tenant scope check | orgs-service | `app/routes/orgs.py:69`, `app/routes/members.py:43` | 7.5 | → cross-tenant member list | baked-v3.0.0 |
+| V-T3-002 | IDOR: /users/{user_id} no ownership check | users-service | `app/routes/users.py:88` | 6.5 | → PII exfil | baked-v3.0.0 |
+| V-T3-003 | Mass assignment: PUT /users/me accepts is_admin | users-service | `app/schemas/users.py:13`, `app/routes/users.py:66` | 8.8 | → privilege escalation | baked-v3.0.0 |
 | V-T3-004 | X-Forwarded-User trusted when X-Cluster-Internal:1 present | api-gateway | TBD Phase 2 | 9.1 | → admin impersonation | baked-deferred |
 | V-T3-005 | Cookie domain .melispy.com (broad) → subdomain takeover | auth-service | `app/config.py:38`, `app/routes/auth.py:151` | 6.8 | → V-T8-002 session theft chain | baked-v3.0.0 |
-| V-T3-006 | Org invitation token: 4-byte hex predictable + no expiry check | orgs-service | TBD Phase 2 | 7.5 | → org membership bypass | baked-deferred |
+| V-T3-006 | Org invitation token: 4-byte hex predictable + no expiry check | orgs-service | `app/routes/invitations.py:109` | 7.5 | → org membership bypass | baked-v3.0.0 |
 | V-T3-007 | API key scope check uses startswith not equality | api-gateway | TBD Phase 2 | 8.1 | → scope escalation | baked-deferred |
 
 ---
@@ -54,11 +54,11 @@ Baked values: `baked-v3.0.0` (committed) | `baked-deferred` (pending phase) | `n
 |---|---|---|---|---|---|---|
 | V-T4-001 | Race condition on /billing/checkout — double charge | billing-service | TBD Phase 2 | 7.5 | → financial fraud | baked-deferred |
 | V-T4-002 | Coupon code stacking — same code N times | billing-service | TBD Phase 2 | 6.5 | → price manipulation | baked-deferred |
-| V-T4-003 | SSRF via avatar image_url fetch (no IP allowlist) | uploads-service | TBD Phase 2 | 8.6 | → V-T8-001 metadata chain | baked-deferred |
+| V-T4-003 | SSRF via avatar image_url fetch (no IP allowlist) | users-service | `app/routes/users.py:124` | 8.6 | → V-T8-001 metadata chain | baked-v3.0.0 |
 | V-T4-004 | SSRF via webhook URL (misses 169.254/IPv6) | webhooks-service | TBD Phase 2 | 8.6 | → V-T8-001 chain | baked-deferred |
 | V-T4-005 | Path traversal in GET /uploads/{filename} | uploads-service | TBD Phase 2 | 7.5 | → read arbitrary files | baked-deferred |
 | V-T4-006 | Polyglot JPEG/PNG upload bypasses magic-byte check | uploads-service | TBD Phase 2 | 7.5 | → stored payload | baked-deferred |
-| V-T4-007 | Stored XSS in user bio (admin log viewer renders raw) | users-service | TBD Phase 2 | 6.1 | → V-T8-005 admin takeover | baked-deferred |
+| V-T4-007 | Stored XSS in user bio (admin log viewer renders raw) | users-service | `app/routes/users.py:70` | 6.1 | → V-T8-005 admin takeover | baked-v3.0.0 |
 | V-T4-008 | SQL injection in /search?q= (raw LIKE concat) | search-service | TBD Phase 2 | 9.8 | → DB read/write | baked-deferred |
 | V-T4-009 | SSTI in dashboard branding (Jinja2 autoescape=False) | users-service | TBD Phase 2 | 9.8 | → V-T6-001 RCE | baked-deferred |
 | V-T4-010 | Webhook retry queue not idempotent | webhooks-service | TBD Phase 2 | 5.3 | → replay attack | baked-deferred |

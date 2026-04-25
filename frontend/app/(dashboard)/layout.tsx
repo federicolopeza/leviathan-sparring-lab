@@ -5,6 +5,10 @@ import { Topbar } from "@/components/layout/topbar";
 
 const dashboardNav = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard/billing", label: "Billing" },
+  { href: "/dashboard/uploads", label: "Uploads" },
+  { href: "/dashboard/webhooks", label: "Webhooks" },
+  { href: "/dashboard/orgs", label: "Orgs" },
   { href: "/dashboard/settings", label: "Settings" }
 ];
 

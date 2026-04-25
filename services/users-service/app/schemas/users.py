@@ -10,6 +10,8 @@ class UserProfileUpdate(BaseModel):
     # scheme + extension. Skipping that gate via PATCH would bypass Phase 1 SAFE checks.
     name: str | None = Field(default=None, min_length=1, max_length=200)
     bio: str | None = Field(default=None, max_length=10_000)
+    # V-T3-003 INTENTIONAL VULN: is_admin exposed in update schema — mass-assignment privilege escalation
+    is_admin: bool | None = Field(default=None)
 
 
 class UserOut(BaseModel):

@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     auth_service_url: str = Field(default="http://auth-service:8000", alias="AUTH_SERVICE_URL")
     users_service_url: str = Field(default="http://users-service:8000", alias="USERS_SERVICE_URL")
     orgs_service_url: str = Field(default="http://orgs-service:8000", alias="ORGS_SERVICE_URL")
+    billing_service_url: str = Field(default="http://billing-service:8000", alias="BILLING_SERVICE_URL")
+    uploads_service_url: str = Field(default="http://uploads-service:8000", alias="UPLOADS_SERVICE_URL")
+    search_service_url: str = Field(default="http://search-service:8000", alias="SEARCH_SERVICE_URL")
+    webhooks_service_url: str = Field(default="http://webhooks-service:8000", alias="WEBHOOKS_SERVICE_URL")
 
     jwt_public_key_pem: str = Field(default="", alias="JWT_PUBLIC_KEY_PEM")
     database_url_audit: str = Field(
