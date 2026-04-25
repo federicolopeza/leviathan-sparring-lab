@@ -7,7 +7,7 @@ RUN python -m pip install --no-cache-dir uv
 
 WORKDIR /app
 COPY services/_shared /_shared
-COPY services/api-gateway/pyproject.toml services/api-gateway/README.md ./
+COPY services/api-gateway/ ./
 RUN uv pip install --system .
 
 FROM python:3.12-slim AS runtime

@@ -7,7 +7,7 @@ RUN python -m pip install --no-cache-dir uv
 
 WORKDIR /app
 COPY services/_shared /_shared
-COPY services/webhooks-service/pyproject.toml services/webhooks-service/README.md ./
+COPY services/webhooks-service/ ./
 RUN uv pip install --system .
 
 FROM python:3.12-slim AS runtime
