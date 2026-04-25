@@ -1,0 +1,7 @@
+certs/
+*.key
+*.crt
+*.srl
+!ROADMAP.md
+!generate-certs.sh
+!.gitignore

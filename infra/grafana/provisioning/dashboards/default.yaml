@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: melispy
+    folder: Melispy
+    type: file
+    options:
+      path: /etc/grafana/dashboards

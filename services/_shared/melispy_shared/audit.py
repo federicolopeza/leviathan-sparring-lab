@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import hmac as hmaclib
-import json
 import os
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
@@ -67,7 +66,7 @@ async def emit_audit(
 
 
 async def verify_chain(session: AsyncSession) -> bool:
-    result = await session.execute(select(AuditLog).order_by(AuditLog.ts, AuditLog.id))
+    result = await session.execute(select(AuditLog).order_by(AuditLog.ts.asc(), AuditLog.id.asc()))
     previous = ""
     for row in result.scalars():
         entry = AuditEntry(
@@ -100,14 +99,14 @@ async def _last_hmac(session: AsyncSession) -> str:
 
 def _compute_hmac(prev_hash: str, entry: AuditEntry) -> str:
     key = os.getenv("AUDIT_LOG_HMAC_KEY", "dev-audit-key").encode()
-    message = (prev_hash + _canonical_json(entry)).encode()
+    message = (
+        prev_hash
+        + entry.event_type
+        + entry.actor_id
+        + entry.resource
+        + entry.action
+    ).encode()
     return hmaclib.new(key, message, hashlib.sha256).hexdigest()
-
-
-def _canonical_json(entry: AuditEntry) -> str:
-    data = entry.model_dump(mode="json", exclude={"hmac"})
-    data["ts"] = _canonical_ts(entry.ts)
-    return json.dumps(data, sort_keys=True, separators=(",", ":"))
 
 
 def _canonical_ts(value: datetime) -> str:
