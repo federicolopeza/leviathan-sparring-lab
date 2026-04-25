@@ -242,6 +242,8 @@ services:
     networks:
       - services_net
       - data_net
+      - data_net
+      - data_net
     security_opt:
       - no-new-privileges:true
 
@@ -260,6 +262,7 @@ services:
     networks:
       - services_net
       - data_net
+      - data_net
     security_opt:
       - no-new-privileges:true
 
@@ -277,6 +280,7 @@ services:
     networks:
       - services_net
       - data_net
+      - data_net
     security_opt:
       - no-new-privileges:true
 
@@ -293,6 +297,7 @@ services:
         condition: service_healthy
     networks:
       - services_net
+      - data_net
       - data_net
     security_opt:
       - no-new-privileges:true
@@ -317,6 +322,7 @@ services:
     networks:
       - services_net
       - data_net
+      - data_net
     security_opt:
       - no-new-privileges:true
 
@@ -334,6 +340,7 @@ services:
     networks:
       - services_net
       - data_net
+      - data_net
     security_opt:
       - no-new-privileges:true
 
@@ -350,6 +357,7 @@ services:
         condition: service_healthy
     networks:
       - services_net
+      - data_net
       - data_net
     security_opt:
       - no-new-privileges:true
