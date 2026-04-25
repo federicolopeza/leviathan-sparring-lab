@@ -18,6 +18,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN addgroup --system appuser && adduser --system --ingroup appuser appuser
 WORKDIR /app
 COPY --from=builder /usr/local /usr/local
+COPY --from=builder /_shared /_shared
 COPY services/admin-service .
 
 USER appuser

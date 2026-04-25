@@ -26,6 +26,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY --from=builder /usr/local /usr/local
+COPY --from=builder /_shared /_shared
 COPY services/notifications-service .
 
 USER appuser
