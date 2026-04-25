@@ -184,8 +184,8 @@ services:
   api-gateway:
     <<: *svc-defaults
     build:
-      context: ../services/api-gateway
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/api-gateway/Dockerfile
     environment:
       AUTH_SERVICE_URL: "http://auth-service:8000"
       USERS_SERVICE_URL: "http://users-service:8000"
@@ -222,8 +222,8 @@ services:
   auth-service:
     <<: *svc-defaults
     build:
-      context: ../services/auth-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/auth-service/Dockerfile
     environment:
       DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_auth"
       REDIS_URL: "redis://redis:6379/1"
@@ -248,8 +248,8 @@ services:
   users-service:
     <<: *svc-defaults
     build:
-      context: ../services/users-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/users-service/Dockerfile
     environment:
       DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_users"
       AUTH_DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_auth"
@@ -266,8 +266,8 @@ services:
   orgs-service:
     <<: *svc-defaults
     build:
-      context: ../services/orgs-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/orgs-service/Dockerfile
     environment:
       DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_orgs"
       JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
@@ -283,8 +283,8 @@ services:
   billing-service:
     <<: *svc-defaults
     build:
-      context: ../services/billing-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/billing-service/Dockerfile
     environment:
       DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_billing"
       JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
@@ -300,8 +300,8 @@ services:
   uploads-service:
     <<: *svc-defaults
     build:
-      context: ../services/uploads-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/uploads-service/Dockerfile
     environment:
       DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_uploads"
       JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
@@ -323,8 +323,8 @@ services:
   search-service:
     <<: *svc-defaults
     build:
-      context: ../services/search-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/search-service/Dockerfile
     environment:
       DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_search"
       JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
@@ -340,8 +340,8 @@ services:
   webhooks-service:
     <<: *svc-defaults
     build:
-      context: ../services/webhooks-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/webhooks-service/Dockerfile
     environment:
       DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_webhooks"
       JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
@@ -357,8 +357,8 @@ services:
   agents-service:
     <<: *svc-defaults
     build:
-      context: ../services/agents-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/agents-service/Dockerfile
     environment:
       DATABASE_URL: "postgresql+asyncpg://melispy_app:@postgres:5432/melispy_agents"
       JWT_PUBLIC_KEY_PEM:
@@ -374,8 +374,8 @@ services:
   llm-service:
     <<: *svc-defaults
     build:
-      context: ../services/llm-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/llm-service/Dockerfile
     environment:
       DATABASE_URL: "postgresql+asyncpg://melispy_app:@postgres:5432/melispy_llm"
       JWT_PUBLIC_KEY_PEM:
@@ -394,8 +394,8 @@ services:
   admin-service:
     <<: *svc-defaults
     build:
-      context: ../services/admin-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/admin-service/Dockerfile
     environment:
       DATABASE_URL: "postgresql+asyncpg://melispy_app:${POSTGRES_PASSWORD}@postgres:5432/melispy_admin"
       DATABASE_URL_AUTH: "postgresql+asyncpg://melispy_app:${POSTGRES_PASSWORD}@postgres:5432/melispy_auth"
@@ -422,8 +422,8 @@ services:
   notifications-service:
     <<: *svc-defaults
     build:
-      context: ../services/notifications-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/notifications-service/Dockerfile
     environment:
       DATABASE_URL: "postgresql+asyncpg://melispy_app:${POSTGRES_PASSWORD}@postgres:5432/melispy_notifications"
       JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
@@ -451,8 +451,8 @@ services:
   cloud-metadata-sim:
     <<: *svc-defaults
     build:
-      context: ../services/cloud-metadata-sim
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/cloud-metadata-sim/Dockerfile
     networks:
       - services_net
       - data_net
