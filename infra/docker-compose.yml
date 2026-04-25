@@ -72,7 +72,8 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=melispy_edge_net"
       - "traefik.http.routers.minio.rule=Host(`cdn.melispy.com`)"
-      - "traefik.http.routers.minio.entrypoints=web"
+      - "traefik.http.routers.minio.entrypoints=web,websecure"
+      - "traefik.http.routers.minio.tls=true"
       - "traefik.http.services.minio.loadbalancer.server.port=9000"
     security_opt:
       - no-new-privileges:true
@@ -94,7 +95,8 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=melispy_edge_net"
       - "traefik.http.routers.vault.rule=Host(`vault.melispy.com`)"
-      - "traefik.http.routers.vault.entrypoints=web"
+      - "traefik.http.routers.vault.entrypoints=web,websecure"
+      - "traefik.http.routers.vault.tls=true"
       - "traefik.http.services.vault.loadbalancer.server.port=8200"
     security_opt:
       - no-new-privileges:true
@@ -218,7 +220,8 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=melispy_edge_net"
       - "traefik.http.routers.api.rule=Host(`api.melispy.com`)"
-      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.routers.api.entrypoints=web,websecure"
+      - "traefik.http.routers.api.tls=true"
       - "traefik.http.services.api.loadbalancer.server.port=8000"
     security_opt:
       - no-new-privileges:true
@@ -418,7 +421,8 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=melispy_edge_net"
       - "traefik.http.routers.admin.rule=Host(`admin.melispy.com`)"
-      - "traefik.http.routers.admin.entrypoints=web"
+      - "traefik.http.routers.admin.entrypoints=web,websecure"
+      - "traefik.http.routers.admin.tls=true"
       - "traefik.http.routers.admin.middlewares=security-headers@file,ratelimit-default@file"
       - "traefik.http.services.admin.loadbalancer.server.port=8080"
     security_opt:
@@ -448,7 +452,8 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=melispy_edge_net"
       - "traefik.http.routers.notifications.rule=Host(`notifications.melispy.com`)"
-      - "traefik.http.routers.notifications.entrypoints=web"
+      - "traefik.http.routers.notifications.entrypoints=web,websecure"
+      - "traefik.http.routers.notifications.tls=true"
       - "traefik.http.services.notifications.loadbalancer.server.port=8080"
     security_opt:
       - no-new-privileges:true
@@ -482,7 +487,8 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=melispy_edge_net"
       - "traefik.http.routers.honeypot.rule=Host(`traefik.melispy.com`)"
-      - "traefik.http.routers.honeypot.entrypoints=web"
+      - "traefik.http.routers.honeypot.entrypoints=web,websecure"
+      - "traefik.http.routers.honeypot.tls=true"
       - "traefik.http.routers.honeypot.middlewares=security-headers@file,ratelimit-strict@file"
       - "traefik.http.services.honeypot.loadbalancer.server.port=8080"
     security_opt:
