@@ -621,7 +621,7 @@ Agent 6 — webhook-alerts (Codex)         # Loki ruler → Discord/Slack via en
 - [ ] /code-review + /simplify
 - [ ] Commit + push: `feat(v3-phase5): defense escalation + observability v3`
 
-### Phase 6 — Loop tooling + release v3.0.0 (~2-3h)
+### Phase 6 — Loop tooling + legacy cleanup + release v3.0.0 (~3-4h)
 
 **Parallel subagents:**
 ```
@@ -630,7 +630,8 @@ Agent 2 — make-triage (fork)             # findings.json → catalog map → s
 Agent 3 — make-redeploy + make-score (Codex)
 Agent 4 — vuln-catalog-validate (fork)   # verify code annotations match catalog
 Agent 5 — public-readme + contributing (fork)  # release-quality docs
-Agent 6 — release-v3.0.0 (fork)          # changelog, tag, GitHub release
+Agent 6 — legacy-cleanup (fork)          # full v1+v2 archive deletion per Section 14
+Agent 7 — release-v3.0.0 (fork)          # changelog, tag, GitHub release
 ```
 
 **Acceptance:**
@@ -638,6 +639,7 @@ Agent 6 — release-v3.0.0 (fork)          # changelog, tag, GitHub release
 - [ ] `make triage ENG=TEST` produces report
 - [ ] `make redeploy V=3.0.0` smoke-tests + tags
 - [ ] Public README has banner, status badges (build, test, security audit), quickstart
+- [ ] **Legacy cleanup completed per Section 14** — repo only contains v3-era assets
 - [ ] `git tag v3.0.0` pushed
 - [ ] GitHub Release with changelog
 - [ ] /code-review + /simplify
@@ -777,12 +779,252 @@ bash deploy/scripts/triage.sh 1h  # ensure no regression in baseline
 
 ---
 
-## 13. Final acceptance — release v3.0.0 ship checklist
+## 13. Legacy cleanup protocol (Phase 6 deliverable)
+
+**Trigger:** v3 fully deployed and verified (Phases 0-5 acceptance criteria all met) AND smoke tests against `app.melispy.com` v3 endpoints pass for ≥6h continuous.
+
+**Pre-cleanup safety:**
+1. `git tag v2-final` on commit `9f75316` (last pure-v2 state) — preserves v2 forever as accessible tag
+2. Vultr snapshot pre-cleanup ("v2-final-snapshot") — manual via UI
+3. Verify GitHub release `v2-final` published with archive of v2 docker-compose + apps
+
+### A) Filesystem deletion (single commit per group)
+
+**Group 1 — v1 archive:**
+```bash
+git rm -rf legacy/
+# legacy/README.md said "delete after 2-3 successful v2 engagements"
+# v3 supersedes v2 entirely; legacy/ gone
+```
+
+**Group 2 — v2 standalone apps (already moved to _v2-deprecated by Phase 0):**
+```bash
+git rm -rf targets/_v2-deprecated/
+git rm -rf targets/damn-vulnerable-ai-agent/  # if not moved
+git rm -rf targets/promptme/
+git rm -rf targets/tenant-billing-api/
+git rm -rf targets/mobile-backend-weak/
+# Keep: targets/honeypot/ (integrates into v3) → move to services/honeypot-service/
+git mv targets/honeypot services/honeypot-service
+git rm targets/catalog.yml  # superseded by VULN-CATALOG.md
+```
+
+**Group 3 — v1/v2 unused stack catalog dirs (35+ Dockerfiles never deployed in v2):**
+```bash
+git rm -rf targets/asterisk-weak targets/bwapp targets/crapi targets/djangogoat \
+           targets/dotnet-goat targets/drupal-cve targets/dvga targets/dvwa \
+           targets/exchange-mock targets/gitea-secrets targets/gitlab-ce-cve22205 \
+           targets/go-fuzz-svc targets/grpc-goat targets/iotgoat-qemu \
+           targets/jenkins-cve1000861 targets/joomla-cve targets/keycloak-weak \
+           targets/kube-goat targets/metadata-sim targets/mutillidae \
+           targets/nexus-cve10199 targets/oauth-lab targets/openplc-hmi \
+           targets/postfix-dovecot-weak targets/railsgoat targets/samba-ad-weak \
+           targets/saml-target targets/seed-repos targets/sonar-cve27986 \
+           targets/spring-petclinic-vuln targets/wireless-sim targets/wordpress-cve \
+           targets/damn-vulnerable-ai-agent targets/promptme targets/mobile-backend-weak \
+           targets/tenant-billing-api
+# Reason: all these were v1 catalog (Juice Shop / DVWA / etc style) — public CTF code,
+# in Leviathan training data, contradicts v3 "no public CTF code" rule
+# Net result: targets/ directory removed entirely (all v3 apps live in services/)
+git rm -rf targets/
+```
+
+**Group 4 — v2 docs superseded:**
+```bash
+git rm vultr-deploy-plan.md       # → ARCHITECTURE.md
+git rm docs/14-defense-playbook.md  # → THREAT-MODEL.md + DEFENSE-STACK.md
+git rm docs/15-tech-stack-vulns.md  # → VULN-CATALOG.md
+git rm docs/16-blue-team-loki-queries.md  # → docs/06-loki-queries.md (migrate content first)
+
+# Keep + update:
+# - README.md (rewrite for v3, public-quality)
+# - STATE.md (rewrite as v3 state)
+# - HANDOFF.md (rewrite as v3 session state)
+# - GONXA-BRIEFING.md (rebrand as engagement template)
+# - postmortem-template.md (keep, useful)
+# - docs/00-overview.md through docs/13-credentials-guide.md (rewrite each per Section 3)
+```
+
+**Group 5 — v2 ops scripts superseded:**
+```bash
+# Keep + refactor (still useful in v3):
+# - scripts/triage.sh (extend with v3 services)
+# - scripts/harden.sh (still applies to host OS)
+# - scripts/lab-up.sh (extend with v3 build steps)
+# - scripts/lab-down.sh (no change needed)
+# - scripts/generate-wg-keys.sh (keep)
+# - scripts/vultr-preflight.sh (update region SCL still valid)
+
+# Delete (v2-specific, no v3 use):
+git rm scripts/gt-rotate.sh           # v2 GT rotator, no GTs in v3 (services replace)
+git rm scripts/build-scoreboard.py    # v1 benchmark scoring
+git rm scripts/reconcile.py            # v1 reconciliation
+git rm scripts/validate-ground-truth.py  # v1 GT validation
+git rm scripts/export-artifacts.sh    # → make export-engagement (Phase 6)
+git rm scripts/kill.sh                # v1 kill switch (replaced by Traefik middleware)
+git rm scripts/smoke.sh               # → deploy/scripts/smoke.sh per service
+```
+
+**Group 6 — v2 root files stale:**
+```bash
+git rm Makefile  # rewrite for v3 (Section 6 Make targets)
+git rm docker-compose.lean.yml  # → infra/docker-compose.yml
+git rm lab.yaml  # v1 ROE template, v3 uses engagements/<id>/lab.yaml
+git rm ground_truth/  -r # v1 ground truth catalog, gone
+git rm ansible/ -r 2>/dev/null  # legacy/ already, double-check
+```
+
+### B) VPS cleanup (live system)
+
+**On VPS `64.176.15.72`:**
+
+```bash
+# Stop v2 containers (after v3 verified)
+ssh root@64.176.15.72 "docker compose -f /opt/levlab/docker-compose.lean.yml --env-file /opt/levlab/.env.lab down"
+
+# Remove v2 images
+ssh root@64.176.15.72 "docker rmi levlab/dvaia:v2 levlab/promptme:v2 levlab/tenant-billing:v2 levlab/mobile-bff:v2 levlab/honeypot:v1 2>/dev/null"
+
+# Remove v2 volumes (if not retained)
+ssh root@64.176.15.72 "docker volume prune -f"
+
+# Remove old compose file
+ssh root@64.176.15.72 "rm /opt/levlab/docker-compose.lean.yml"
+
+# Remove v2 deploy/landing static (replaced by frontend/)
+ssh root@64.176.15.72 "rm -rf /opt/levlab/deploy/landing /opt/levlab/deploy/seccomp /opt/levlab/deploy/falco/falco_rules.local.yaml"
+
+# Resync v3 repo state (lab-up.sh handles)
+make up
+```
+
+### C) Cloudflare DNS cleanup
+
+```bash
+# Delete v2-only subdomains (apps now under app/api/admin):
+# - agent.melispy.com (replaced by app.melispy.com chat widget)
+# - chat.melispy.com (replaced by /v1/llm/* on api)
+# - billing.melispy.com (replaced by /v1/billing/* on api)
+# - mobile.melispy.com (replaced by /v1/legacy/auth/* on api)
+
+CF_API_TOKEN='<from .env.lab>' CF_ZONE_ID='<from .env.lab>'
+for sub in agent chat billing mobile; do
+  RID=$(curl -s -H "Authorization: Bearer $CF_API_TOKEN" \
+    "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/dns_records?name=$sub.melispy.com" \
+    | jq -r '.result[0].id // empty')
+  [ -n "$RID" ] && curl -s -X DELETE -H "Authorization: Bearer $CF_API_TOKEN" \
+    "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/dns_records/$RID"
+done
+
+# v3 final DNS state:
+# - melispy.com (apex) → CF tunnel → traefik → frontend nginx
+# - www.melispy.com → same as apex
+# - app.melispy.com → frontend
+# - api.melispy.com → api-gateway
+# - admin.melispy.com → admin-service (CF Access protected)
+# - cdn.melispy.com → MinIO (avatars/exports)
+# - static.melispy.com → frontend static assets
+# - vault.melispy.com → Vault UI (CF Access protected, internal only)
+# - traefik.melispy.com → Traefik dashboard (admin lockdown WAF rule)
+```
+
+### D) Cloudflare Tunnel ingress cleanup
+
+```bash
+# Update tunnel config to v3 ingress only (drop v2 hostnames)
+CF_API_TOKEN='<>' CF_ACCOUNT_ID='<>' CF_TUNNEL_ID='<>'
+curl -X PUT -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" \
+  "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/cfd_tunnel/$CF_TUNNEL_ID/configurations" \
+  --data '{
+    "config": {
+      "ingress": [
+        {"hostname": "melispy.com",       "service": "http://traefik:80"},
+        {"hostname": "www.melispy.com",   "service": "http://traefik:80"},
+        {"hostname": "app.melispy.com",   "service": "http://traefik:80"},
+        {"hostname": "api.melispy.com",   "service": "http://traefik:80"},
+        {"hostname": "admin.melispy.com", "service": "http://traefik:80"},
+        {"hostname": "cdn.melispy.com",   "service": "http://traefik:80"},
+        {"hostname": "static.melispy.com","service": "http://traefik:80"},
+        {"hostname": "vault.melispy.com", "service": "http://traefik:80"},
+        {"hostname": "traefik.melispy.com","service": "http://traefik:80"},
+        {"service": "http_status:404"}
+      ]
+    }
+  }'
+```
+
+### E) Cloudflare WAF rules — review for v3 fit
+
+Existing 5 rules (in `http_request_firewall_custom` ruleset `98e5f64c7d3d4e96a48043cad1ad0976`):
+1. Block scanner UAs + recon paths — **KEEP** (still valid)
+2. Block payload patterns SQLi/XSS/SSRF/traversal — **KEEP**
+3. Challenge headless/scripted UAs — **KEEP**
+4. Admin lockdown traefik/grafana — **EXTEND** to include `admin.melispy.com`, `vault.melispy.com`
+5. Geo block + threat_score — **KEEP**
+
+Add (if Pro plan or 5-rule limit allows consolidation):
+6. Rate limit per-token-tier (free/pro/enterprise) at edge — needs CF Pro
+7. JA3/JA4 bot detection — needs CF Bot Management add-on
+
+### F) Engagement folder migration
+
+```bash
+# Old v2 engagement (LEV-MELISPY-GONXA-002) → archive
+git mv engagements/LEV-MELISPY-GONXA-002 engagements/_archive/v2-final-LEV-MELISPY-GONXA-002 2>/dev/null
+
+# v3 first engagement: LEV-MELISPY-V3-001 created by `make engage`
+```
+
+### G) Vultr resource verify
+
+After cleanup verify:
+```bash
+ssh root@64.176.15.72 "docker ps | wc -l"      # should be ~22 (Phase 5 + Phase 6 stack)
+ssh root@64.176.15.72 "docker images | grep -c 'levlab\|melispy'"  # only v3 images
+ssh root@64.176.15.72 "df -h /"                # disk usage trimmed
+ssh root@64.176.15.72 "docker volume ls | wc -l"  # only v3 volumes
+```
+
+### Cleanup commit pattern
+
+One commit per group:
+
+```
+chore(cleanup): remove legacy v1 archive
+chore(cleanup): remove v2 standalone targets (replaced by services/)
+chore(cleanup): remove v1/v2 catalog Dockerfiles (Juice Shop / DVWA / etc — public CTF, not v3)
+chore(cleanup): remove v2 docs superseded by v3 (vultr-deploy-plan, etc)
+chore(cleanup): remove v2 ops scripts superseded by v3 Makefile
+chore(cleanup): remove v2 root config (Makefile, lab.yaml, ground_truth, etc)
+chore(cleanup-vps): tear down v2 containers + images + volumes
+chore(cleanup-cf): drop v2 DNS records + update tunnel ingress
+chore(cleanup-cf): extend WAF admin-lockdown rule for v3 hosts
+chore(cleanup): archive v2 engagement folder
+release(v3.0.0): Melispy Inc baseline pentest benchmark
+```
+
+**After cleanup the repo MUST contain only:**
+- `README.md` `ARCHITECTURE.md` `THREAT-MODEL.md` `VULN-CATALOG.md` `HARDENING-LADDER.md` `ENGAGEMENT-LOG.md` `CONTRIBUTING.md` `HANDOFF.md` `STATE.md` `MASTER-PROMPT-V3.md` `CLAUDE.md` `GONXA-BRIEFING.md` `postmortem-template.md`
+- `frontend/` `services/` `db/` `infra/` `deploy/` `docs/` `scripts/`
+- `engagements/_archive/` (gitignored, but `.gitkeep` retained)
+- `.env.lab.example` `.gitignore` `Makefile` `pyproject.toml` `package.json`
+
+**No `legacy/`, no `targets/`, no v2 docs, no v2 scripts.**
+
+---
+
+## 14. Final acceptance — release v3.0.0 ship checklist
 
 - [ ] All 6 phases complete + tagged
 - [ ] 50+ vulns documented in `VULN-CATALOG.md` with CVSS + tier + chain
 - [ ] All 7 defense layers active + verified
 - [ ] Engagement loop tooling functional end-to-end
+- [ ] **Legacy cleanup complete per Section 13** — repo only contains v3 assets
+- [ ] `legacy/` deleted, `targets/` deleted, v2 docs deleted, v2 scripts deleted
+- [ ] VPS only running v3 containers (`docker ps` shows only `melispy-*` named)
+- [ ] CF DNS only contains v3 hostnames (no `agent`/`chat`/`billing`/`mobile`)
+- [ ] CF Tunnel ingress matches v3 hostname list
+- [ ] Tag `v2-final` exists pointing to commit `9f75316` (last v2 state preserved)
 - [ ] At least one full live engagement (Leviathan or human) executed against v3.0.0
 - [ ] Score published in `ENGAGEMENT-LOG.md`
 - [ ] GitHub release `v3.0.0` with changelog
@@ -793,7 +1035,7 @@ When v3.0.0 ships, the repo becomes a public benchmark. From v3.0.1 onwards: con
 
 ---
 
-## 14. Quickstart for clean-context executor
+## 15. Quickstart for clean-context executor
 
 ```bash
 # 0. Open repo
