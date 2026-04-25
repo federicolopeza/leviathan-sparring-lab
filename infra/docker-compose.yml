@@ -368,7 +368,7 @@ services:
       context: ..
       dockerfile: services/agents-service/Dockerfile
     environment:
-      DATABASE_URL: "postgresql+asyncpg://melispy_app:@postgres:5432/melispy_agents"
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_agents"
       JWT_PUBLIC_KEY_PEM:
     depends_on:
       postgres:
@@ -385,7 +385,7 @@ services:
       context: ..
       dockerfile: services/llm-service/Dockerfile
     environment:
-      DATABASE_URL: "postgresql+asyncpg://melispy_app:@postgres:5432/melispy_llm"
+      DATABASE_URL: "postgresql+asyncpg://melispy_app:${APP_DB_PASSWORD}@postgres:5432/melispy_llm"
       JWT_PUBLIC_KEY_PEM:
       LLM_MOCK_MODE: "true"
     depends_on:
