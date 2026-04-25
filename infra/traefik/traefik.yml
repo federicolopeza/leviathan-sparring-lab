@@ -26,7 +26,7 @@ entryPoints:
 
 providers:
   docker:
-    network: edge_net
+    network: melispy_edge_net
     exposedByDefault: false
     watch: true
   file:
