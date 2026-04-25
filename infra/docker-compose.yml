@@ -211,6 +211,7 @@ services:
     networks:
       - edge_net
       - services_net
+      - data_net
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.rule=Host(`api.melispy.com`)"
