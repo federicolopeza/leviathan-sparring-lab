@@ -424,7 +424,7 @@ services:
       - "traefik.http.routers.admin.entrypoints=web,websecure"
       - "traefik.http.routers.admin.tls=true"
       - "traefik.http.routers.admin.middlewares=security-headers@file,ratelimit-default@file"
-      - "traefik.http.services.admin.loadbalancer.server.port=8080"
+      - "traefik.http.services.admin.loadbalancer.server.port=8000"
     security_opt:
       - no-new-privileges:true
 
@@ -454,7 +454,7 @@ services:
       - "traefik.http.routers.notifications.rule=Host(`notifications.melispy.com`)"
       - "traefik.http.routers.notifications.entrypoints=web,websecure"
       - "traefik.http.routers.notifications.tls=true"
-      - "traefik.http.services.notifications.loadbalancer.server.port=8080"
+      - "traefik.http.services.notifications.loadbalancer.server.port=8000"
     security_opt:
       - no-new-privileges:true
 
