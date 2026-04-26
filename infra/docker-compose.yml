@@ -485,7 +485,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=melispy_edge_net"
-      - 'traefik.http.routers.app.rule=Host(`app.melispy.com`) || Host(`melispy.com`) || Host(`www.melispy.com`)'
+      - 'traefik.http.routers.app.rule=Host(`app.melispy.com`) || Host(`melispy.com`) || Host(`www.melispy.com`) || Host(`static.melispy.com`)'
       - "traefik.http.routers.app.entrypoints=web,websecure"
       - "traefik.http.routers.app.tls=true"
       - "traefik.http.services.app.loadbalancer.server.port=80"
