@@ -2,7 +2,7 @@
 process.env.NEXT_PUBLIC_API_URL ??= "https://api.melispy.com";
 
 const nextConfig = {
-  output: "export",
+  output: "standalone",
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL
   },
@@ -10,7 +10,6 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
-  // Skip TS/ESLint errors during prod build (Phase 7 hot-deploy; full strict via CI later)
   typescript: {
     ignoreBuildErrors: true
   },
