@@ -423,7 +423,6 @@ services:
       - "traefik.http.routers.admin.rule=Host(`admin.melispy.com`)"
       - "traefik.http.routers.admin.entrypoints=web,websecure"
       - "traefik.http.routers.admin.tls=true"
-      - "traefik.http.routers.admin.middlewares=security-headers@file,ratelimit-default@file"
       - "traefik.http.services.admin.loadbalancer.server.port=8000"
     security_opt:
       - no-new-privileges:true
