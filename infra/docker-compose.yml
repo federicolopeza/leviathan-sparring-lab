@@ -70,7 +70,7 @@ services:
       retries: 3
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=melispy_edge_net"
+      - "traefik.docker.network=melispy_services_net"
       - "traefik.http.routers.minio.rule=Host(`cdn.melispy.com`)"
       - "traefik.http.routers.minio.entrypoints=web,websecure"
       - "traefik.http.routers.minio.tls=true"
@@ -93,7 +93,7 @@ services:
       - services_net
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=melispy_edge_net"
+      - "traefik.docker.network=melispy_services_net"
       - "traefik.http.routers.vault.rule=Host(`vault.melispy.com`)"
       - "traefik.http.routers.vault.entrypoints=web,websecure"
       - "traefik.http.routers.vault.tls=true"
@@ -419,7 +419,7 @@ services:
       - data_net
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=melispy_edge_net"
+      - "traefik.docker.network=melispy_services_net"
       - "traefik.http.routers.admin.rule=Host(`admin.melispy.com`)"
       - "traefik.http.routers.admin.entrypoints=web,websecure"
       - "traefik.http.routers.admin.tls=true"
@@ -449,7 +449,7 @@ services:
       - data_net
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=melispy_edge_net"
+      - "traefik.docker.network=melispy_services_net"
       - "traefik.http.routers.notifications.rule=Host(`notifications.melispy.com`)"
       - "traefik.http.routers.notifications.entrypoints=web,websecure"
       - "traefik.http.routers.notifications.tls=true"
@@ -484,7 +484,7 @@ services:
       - services_net
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=melispy_edge_net"
+      - "traefik.docker.network=melispy_services_net"
       - "traefik.http.routers.honeypot.rule=Host(`traefik.melispy.com`)"
       - "traefik.http.routers.honeypot.entrypoints=web,websecure"
       - "traefik.http.routers.honeypot.tls=true"
